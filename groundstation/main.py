@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from groundstation.MavlinkReceiver import MavlinkReciever
 
 
@@ -22,19 +23,40 @@ r for red, g for green, b for black, u for blue, y for yellow
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    # loggers
+    main_logger = logging.getLogger("Main")
+    target_info_logger = logging.getLogger("Target_Info")
+
+    # make directory
+    Path("logs").mkdir(exist_ok=True, parents=True)
+    main_handler_path = Path("logs", "main.log")
+    main_handler = logging.FileHandler(main_handler_path, mode="w")
+    target_info_handler_path = Path("logs", "Task_1_WARG_targets.txt")
+    target_info_handler = logging.FileHandler(target_info_handler_path,
+                                              mode="w")
+    formatter = logging.Formatter(
+        fmt="%(asctime)s: [%(levelname)s] %(message)s", datefmt="%H:%M:%S"
     )
+    # adding handlers and formatters
+    main_handler.setFormatter(formatter)
+    main_logger.addHandler(main_handler)
+    target_info_logger.addHandler(target_info_handler)
+    # changing logger levels
+    main_logger.setLevel(logging.INFO)
+    target_info_logger.setLevel(logging.INFO)
+
     # dictionary definition
     colors = {"r": "red",
               "b": "black",
               "u": "blue",
               "y": "yellow",
               "g": "green"}
-    directions = {"n": "north", "s": "south", "w": "west", "e": "east"}
-
-    receiver = MavlinkReciever(CONNECTION_STRING)
-
+    directions = {"n": "north",
+                  "s": "south",
+                  "w": "west",
+                  "e": "east"}
+    num_corrupted = 0
+    receiver = MavlinkReciever(CONNECTION_STRING, main_logger)
     while True:
         try:
             success, info = receiver.get_message()
@@ -45,21 +67,28 @@ def main() -> None:
             # color
             color = colors[info[1]]
             # amount up and to the right of bottom left corner of wall
-            up = info[2]
-            right = info[3]
+            up = float(info[2])
+            right = float(info[3])
             # Log a human readable message
-            logging.info(
-                f"The {color} target is {up} units up and {right} units"
+            target_info_logger.info(
+                f"The {color} target is {up} meters up and {right} meters"
                 f" right from the bottom left corner of the {direction}"
                 f" wall"
             )
         except KeyError as k:
-            logging.error(f"Key Error, {k}")
+            num_corrupted += 1
+            main_logger.error(f"Key Error, {k}")
+        except ValueError as v:
+            num_corrupted += 1
+            main_logger.error(f"Invalid double value, {v}")
         except KeyboardInterrupt:
-            print("Terminating Program")
+            main_logger.info(
+                f"Terminating Program, number of corrupted"
+                f"messages:{num_corrupted}"
+            )
             break
         except Exception as e:
-            logging.error(f"A problem occured {e}")
+            main_logger.error(f"A problem occured {e}")
 
 
 if __name__ == "__main__":

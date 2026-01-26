@@ -41,10 +41,6 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      # Install zbar library to resolve pyzbar import error
-      - name: Install zbar library
-        run: sudo apt-get install libzbar0
-
       # Run linters and formatters
       - name: Linters and formatters
         run: |

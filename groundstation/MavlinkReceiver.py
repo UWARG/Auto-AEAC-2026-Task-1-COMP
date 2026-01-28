@@ -16,13 +16,14 @@ class MavlinkReciever:
     def __init__(
         self, connection_string: str, logger: logging.Logger
     ) -> mavutil.mavlink_connection:
+        self.logger = logger
         while not self.__mavlink_connected(connection_string):
             time.sleep(1)
-        self.logger = logger
+        
 
     def __mavlink_connected(self, connection_string: str) -> bool:
         try:
-            self.connection = mavutil.mavlink_connection(connection_string)
+            self.connection = mavutil.mavlink_connection(connection_string, timeout=1)
             self.connection.wait_heartbeat()
             self.logger.info(
                 f"Heartbeat recieved from {self.connection.target_system}"
@@ -45,12 +46,11 @@ class MavlinkReciever:
             self.logger.info(f"Ignoring message from {msg.get_srcComponent}")
         try:
             text = msg.text
-            if isinstance(text, bytes):
-                message = text.decode("UTF-8").strip("\x00")
-                info = message.split(",")
+            if isinstance(text, str):
+                info = text.split(",")
                 return True, info
             else:
-                self.logger.error(f"Invalid format, {text}")
+                self.logger.error(f"Invalid format, {type(text)}")
         except Exception as e:
             self.logger.error(f"message processing failed {e}")
         return False, None

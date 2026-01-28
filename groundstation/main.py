@@ -1,11 +1,23 @@
 import logging
+import subprocess
+import multiprocessing
 from datetime import datetime
 from pathlib import Path
+import sys
 from groundstation.MavlinkReceiver import MavlinkReciever
 
 
-CONNECTION_STRING = "tcp:localhost:1400"
-
+CONNECTION_STRING = "tcpin:localhost:1400"
+COLORS = {"r": "red",
+            "b": "black",
+            "u": "blue",
+            "y": "yellow",
+            "g": "green"}
+DIRECTIONS = {"n": "north",
+                "s": "south",
+                "w": "west",
+                "e": "east"}
+TESTING_MODULE="groundstation.message_test"
 """
 Mavlink statustext parser for groundstation
 
@@ -15,12 +27,15 @@ seperated by commas. The first character indicates the wall's cardinal
 direction, the second indicates the color of the target. The doubles
 indicate the position up and to the right of the bottom left corner of the
 wall respectively.
-Cardinal directions dictionary:
+Cardinal DIRECTIONS dictionary:
 n for north, s for south, e for east, w for west
-Colors dictionary:
+COLORS dictionary:
 r for red, g for green, b for black, u for blue, y for yellow
 
 """
+
+def test() -> None:
+    subprocess.run([f"{sys.executable}", "-m", TESTING_MODULE])
 
 
 def main() -> None:
@@ -46,28 +61,19 @@ def main() -> None:
     # changing logger levels
     main_logger.setLevel(logging.INFO)
     target_info_logger.setLevel(logging.INFO)
-
-    # dictionary definition
-    colors = {"r": "red",
-              "b": "black",
-              "u": "blue",
-              "y": "yellow",
-              "g": "green"}
-    directions = {"n": "north",
-                  "s": "south",
-                  "w": "west",
-                  "e": "east"}
     num_corrupted = 0
+    assert main_logger is not None 
     receiver = MavlinkReciever(CONNECTION_STRING, main_logger)
+
     while True:
         try:
             success, info = receiver.get_message()
             if not success:
                 continue
             # direction
-            direction = directions[info[0]]
+            direction = DIRECTIONS[info[0]]
             # color
-            color = colors[info[1]]
+            color = COLORS[info[1]]
             # amount up and to the right of bottom left corner of wall
             up = float(info[2])
             right = float(info[3])
@@ -94,4 +100,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.Process(target=test).start()
     main()
+    print("done")

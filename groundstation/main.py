@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 from groundstation.MavlinkReceiver import MavlinkReciever
 
@@ -29,9 +30,10 @@ def main() -> None:
 
     # make directory
     Path("logs").mkdir(exist_ok=True, parents=True)
-    main_handler_path = Path("logs", "main.log")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    main_handler_path = Path("logs", f"main_{timestamp}.log")
     main_handler = logging.FileHandler(main_handler_path, mode="w")
-    target_info_handler_path = Path("logs", "Task_1_WARG_targets.txt")
+    target_info_handler_path = Path("logs", f"Task_1_WARG_targets_{timestamp}.txt")
     target_info_handler = logging.FileHandler(target_info_handler_path,
                                               mode="w")
     formatter = logging.Formatter(

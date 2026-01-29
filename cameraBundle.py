@@ -3,7 +3,15 @@ import depthai as dai
 
 class CameraBundle:
     """Helper to create and link camera nodes and stereo outputs."""
-    def __init__(self, pipeline: dai.Pipeline, rgb_socket=dai.CameraBoardSocket.CAM_A, left_socket=dai.CameraBoardSocket.CAM_B, right_socket=dai.CameraBoardSocket.CAM_C, mono_resolution=(640, 400)):
+
+    def __init__(
+        self,
+        pipeline: dai.Pipeline,
+        rgb_socket=dai.CameraBoardSocket.CAM_A,
+        left_socket=dai.CameraBoardSocket.CAM_B,
+        right_socket=dai.CameraBoardSocket.CAM_C,
+        mono_resolution=(640, 400),
+    ):
         self.pipeline = pipeline
         self.camRgb = pipeline.create(dai.node.Camera).build(rgb_socket)
         self.monoLeft = pipeline.create(dai.node.Camera).build(left_socket)

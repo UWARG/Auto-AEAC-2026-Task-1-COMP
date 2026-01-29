@@ -2,8 +2,10 @@ import time
 import depthai as dai
 from rerun_node import RerunNode
 from cameraBundle import CameraBundle
+
+
 # Create pipeline
-def add_basalt_vio_rtab(p: dai.Pipeline, cameras: 'CameraBundle' = None):
+def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None) -> RerunNode:
     with p:
         fps = 60
         width = 640
@@ -16,13 +18,17 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: 'CameraBundle' = None):
         odom = p.create(dai.node.BasaltVIO)
         slam = p.create(dai.node.RTABMapSLAM)
         stereo = cameras.stereo
-        params = {"RGBD/CreateOccupancyGrid": "true",
-                "Grid/3D": "true",
-                "Rtabmap/SaveWMState": "true"}
+        params = {
+            "RGBD/CreateOccupancyGrid": "true",
+            "Grid/3D": "true",
+            "Rtabmap/SaveWMState": "true",
+        }
         slam.setParams(params)
 
         rerunViewer = RerunNode()
-        imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200)
+        imu.enableIMUSensor(
+            [dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200
+        )
         imu.setBatchReportThreshold(1)
         imu.setMaxBatchReports(10)
 
@@ -33,7 +39,6 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: 'CameraBundle' = None):
         stereo.enableDistortionCorrection(True)
         stereo.initialConfig.setLeftRightCheckThreshold(10)
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
-
 
         left.requestOutput((width, height)).link(stereo.left)
         right.requestOutput((width, height)).link(stereo.right)
@@ -49,5 +54,5 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: 'CameraBundle' = None):
         slam.occupancyGridMap.link(rerunViewer.inputGrid)
         slam.obstaclePCL.link(rerunViewer.inputObstaclePCL)
         slam.groundPCL.link(rerunViewer.inputGroundPCL)
-        p.start()
-        time.sleep(2) #buffer time for nodes to start
+        time.sleep(2)  # buffer time for nodes to start
+        return rerunViewer

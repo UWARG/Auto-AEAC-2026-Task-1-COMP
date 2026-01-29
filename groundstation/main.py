@@ -49,10 +49,8 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     main_handler_path = Path("logs", f"main_{timestamp}.log")
     main_handler = logging.FileHandler(main_handler_path, mode="w")
-    target_info_handler_path = Path("logs",
-                                    f"Task_1_WARG_targets_{timestamp}.txt")
-    target_info_handler = logging.FileHandler(target_info_handler_path,
-                                              mode="w")
+    target_info_handler_path = Path("logs", f"Task_1_WARG_targets_{timestamp}.txt")
+    target_info_handler = logging.FileHandler(target_info_handler_path, mode="w")
     formatter = logging.Formatter(
         fmt="%(asctime)s: [%(levelname)s] %(message)s", datefmt="%H:%M:%S"
     )
@@ -93,8 +91,7 @@ def main() -> None:
             main_logger.error(f"Invalid double value, {v}")
         except KeyboardInterrupt:
             main_logger.info(
-                f"Terminating Program, number of corrupted"
-                f" messages:{num_corrupted}"
+                f"Terminating Program, number of corrupted" f" messages:{num_corrupted}"
             )
             break
         except Exception as e:

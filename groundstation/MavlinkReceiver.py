@@ -20,14 +20,9 @@ class MavlinkReciever:
         while not self.__mavlink_connected(connection_string):
             time.sleep(1)
 
-    def __mavlink_connected(self,  # noqa: ANN101
-                            connection_string: str
-                            ) -> bool:
+    def __mavlink_connected(self, connection_string: str) -> bool:  # noqa: ANN101
         try:
-            self.connection = mavutil.mavlink_connection(
-                                                         connection_string,
-                                                         timeout=1
-                                                         )
+            self.connection = mavutil.mavlink_connection(connection_string, timeout=1)
             self.connection.wait_heartbeat()
             self.logger.info(
                 f"Heartbeat recieved from {self.connection.target_system}"

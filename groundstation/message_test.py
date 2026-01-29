@@ -13,22 +13,15 @@ NUM_MESSAGES = 5
 
 def main() -> None:
     connection = mavutil.mavlink_connection(
-        CONNECTION_STRING,
-        source_system=1,
-        source_component=AIRSIDE_COMPONENT_ID
+        CONNECTION_STRING, source_system=1, source_component=AIRSIDE_COMPONENT_ID
     )
     time.sleep(1)
     connection.mav.heartbeat_send(
-        mavutil.mavlink.MAV_TYPE_GCS,
-        mavutil.mavlink.MAV_AUTOPILOT_INVALID,
-        0,
-        0,
-        0
+        mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0
     )
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     logging.basicConfig(
-        filename=Path("logs", f"message_logs_{timestamp}.log"),
-        level=logging.INFO
+        filename=Path("logs", f"message_logs_{timestamp}.log"), level=logging.INFO
     )
     message_logger = logging.getLogger("Message_Logger")
     for _ in range(NUM_MESSAGES):

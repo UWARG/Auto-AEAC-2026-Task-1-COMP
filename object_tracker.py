@@ -3,23 +3,21 @@
 import cv2
 import depthai as dai
 import time
-
+from cameraBundle import CameraBundle
 
 fullFrameTracking = False
 
 # Create pipeline
-def add_object_tracker(pipeline: dai.Pipeline):
-    with pipeline:
-        # Define sources and outputs
-        camRgb = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        monoLeft = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-        monoRight = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
 
-        stereo = pipeline.create(dai.node.StereoDepth)
-        leftOutput = monoLeft.requestOutput((640, 400))
-        rightOutput = monoRight.requestOutput((640, 400))
-        leftOutput.link(stereo.left)
-        rightOutput.link(stereo.right)
+def add_object_tracker(pipeline: dai.Pipeline, cameras: 'CameraBundle' = None):
+    with pipeline:
+        cameras = cameras or CameraBundle(pipeline)
+        camRgb = cameras.camRgb
+        monoLeft = cameras.monoLeft
+        monoRight = cameras.monoRight
+        stereo = cameras.stereo
+        leftOutput = cameras.leftOutput
+        rightOutput = cameras.rightOutput
 
         spatialDetectionNetwork = pipeline.create(dai.node.SpatialDetectionNetwork).build(camRgb, stereo, "yolov6-nano")
         objectTracker = pipeline.create(dai.node.ObjectTracker)

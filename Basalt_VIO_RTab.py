@@ -1,20 +1,21 @@
 import time
 import depthai as dai
 from rerun_node import RerunNode
-
+from cameraBundle import CameraBundle
 # Create pipeline
-def add_basalt_vio_rtab(p: dai.Pipeline):
+def add_basalt_vio_rtab(p: dai.Pipeline, cameras: 'CameraBundle' = None):
     with p:
         fps = 60
         width = 640
         height = 400
         # Define sources and outputs
-        left = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B, sensorFps=fps)
-        right = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C, sensorFps=fps)
+        cameras = CameraBundle(p)
+        left = cameras.monoLeft
+        right = cameras.monoRight
         imu = p.create(dai.node.IMU)
         odom = p.create(dai.node.BasaltVIO)
         slam = p.create(dai.node.RTABMapSLAM)
-        stereo = p.create(dai.node.StereoDepth)
+        stereo = cameras.stereo
         params = {"RGBD/CreateOccupancyGrid": "true",
                 "Grid/3D": "true",
                 "Rtabmap/SaveWMState": "true"}

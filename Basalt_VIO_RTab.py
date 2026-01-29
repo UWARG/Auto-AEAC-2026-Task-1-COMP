@@ -50,5 +50,4 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: 'CameraBundle' = None):
         slam.obstaclePCL.link(rerunViewer.inputObstaclePCL)
         slam.groundPCL.link(rerunViewer.inputGroundPCL)
         p.start()
-        while p.isRunning():
-            time.sleep(1)
+        time.sleep(2) #buffer time for nodes to start

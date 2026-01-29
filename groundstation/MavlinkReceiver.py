@@ -14,16 +14,20 @@ class MavlinkReciever:
     AIRSIDE_COMPONENT_ID = 191
 
     def __init__(
-        self, connection_string: str, logger: logging.Logger
+        self, connection_string: str, logger: logging.Logger  # noqa: ANN101
     ) -> mavutil.mavlink_connection:
         self.logger = logger
         while not self.__mavlink_connected(connection_string):
             time.sleep(1)
-        
 
-    def __mavlink_connected(self, connection_string: str) -> bool:
+    def __mavlink_connected(self,  # noqa: ANN101
+                            connection_string: str
+                            ) -> bool:
         try:
-            self.connection = mavutil.mavlink_connection(connection_string, timeout=1)
+            self.connection = mavutil.mavlink_connection(
+                                                         connection_string,
+                                                         timeout=1
+                                                         )
             self.connection.wait_heartbeat()
             self.logger.info(
                 f"Heartbeat recieved from {self.connection.target_system}"
@@ -34,7 +38,7 @@ class MavlinkReciever:
             self.logger.error(f"Encountered Error {e}. Trying Again")
             return False
 
-    def get_message(self) -> tuple[True, list[str]] | tuple[bool, None]:
+    def get_message(self) -> tuple[True, list[str]] | tuple[bool, None]:  # noqa :ANN101
         msg = self.connection.recv_match(type="STATUSTEXT", blocking=True)
         if not msg:
             self.logger.error("Recieved empty message")

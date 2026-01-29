@@ -1,23 +1,3 @@
-import logging
-import subprocess
-import multiprocessing
-from datetime import datetime
-from pathlib import Path
-import sys
-from groundstation.MavlinkReceiver import MavlinkReciever
-
-
-CONNECTION_STRING = "tcpin:localhost:1400"
-COLORS = {"r": "red",
-            "b": "black",
-            "u": "blue",
-            "y": "yellow",
-            "g": "green"}
-DIRECTIONS = {"n": "north",
-                "s": "south",
-                "w": "west",
-                "e": "east"}
-TESTING_MODULE="groundstation.message_test"
 """
 Mavlink statustext parser for groundstation
 
@@ -34,11 +14,32 @@ r for red, g for green, b for black, u for blue, y for yellow
 
 """
 
+import logging
+import subprocess
+import multiprocessing
+from datetime import datetime
+from pathlib import Path
+import sys
+from groundstation.MavlinkReceiver import MavlinkReciever
+
+
+CONNECTION_STRING = "tcpin:localhost:1400"
+COLORS = {"r": "red", "b": "black", "u": "blue", "y": "yellow", "g": "green"}
+DIRECTIONS = {"n": "north", "s": "south", "w": "west", "e": "east"}
+TESTING_MODULE = "groundstation.message_test"
+
+
 def test() -> None:
+    """
+    For running the testing module
+    """
     subprocess.run([f"{sys.executable}", "-m", TESTING_MODULE])
 
 
 def main() -> None:
+    """
+    Main function
+    """
     # loggers
     main_logger = logging.getLogger("Main")
     target_info_logger = logging.getLogger("Target_Info")
@@ -48,7 +49,8 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     main_handler_path = Path("logs", f"main_{timestamp}.log")
     main_handler = logging.FileHandler(main_handler_path, mode="w")
-    target_info_handler_path = Path("logs", f"Task_1_WARG_targets_{timestamp}.txt")
+    target_info_handler_path = Path("logs",
+                                    f"Task_1_WARG_targets_{timestamp}.txt")
     target_info_handler = logging.FileHandler(target_info_handler_path,
                                               mode="w")
     formatter = logging.Formatter(
@@ -62,7 +64,7 @@ def main() -> None:
     main_logger.setLevel(logging.INFO)
     target_info_logger.setLevel(logging.INFO)
     num_corrupted = 0
-    assert main_logger is not None 
+    assert main_logger is not None
     receiver = MavlinkReciever(CONNECTION_STRING, main_logger)
 
     while True:
@@ -92,7 +94,7 @@ def main() -> None:
         except KeyboardInterrupt:
             main_logger.info(
                 f"Terminating Program, number of corrupted"
-                f"messages:{num_corrupted}"
+                f" messages:{num_corrupted}"
             )
             break
         except Exception as e:

@@ -1,22 +1,22 @@
-import time
 import depthai as dai
-from rerun_node import RerunNode
 from cameraBundle import CameraBundle
 
 
 # Create pipeline
-def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None) -> RerunNode:
+def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None):
     with p:
+        # Ensure we have a CameraBundle (created only if not provided)
+        cameras = cameras or CameraBundle(p)
         fps = 60
         width = 640
         height = 400
         # Define sources and outputs
-        cameras = CameraBundle(p)
+        
         left = cameras.monoLeft
         right = cameras.monoRight
         imu = p.create(dai.node.IMU)
         odom = p.create(dai.node.BasaltVIO)
-        slam = p.create(dai.node.RTABMapSLAM)
+        slam = cameras.slam
         stereo = cameras.stereo
         params = {
             "RGBD/CreateOccupancyGrid": "true",
@@ -25,7 +25,6 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None) -> Reru
         }
         slam.setParams(params)
 
-        rerunViewer = RerunNode()
         imu.enableIMUSensor(
             [dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 200
         )
@@ -49,10 +48,4 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None) -> Reru
         imu.out.link(odom.imu)
 
         odom.transform.link(slam.odom)
-        slam.transform.link(rerunViewer.inputTrans)
-        slam.passthroughRect.link(rerunViewer.inputImg)
-        slam.occupancyGridMap.link(rerunViewer.inputGrid)
-        slam.obstaclePCL.link(rerunViewer.inputObstaclePCL)
-        slam.groundPCL.link(rerunViewer.inputGroundPCL)
-        time.sleep(2)  # buffer time for nodes to start
-        return rerunViewer
+        

@@ -16,6 +16,7 @@ class CameraBundle:
         self.camRgb = pipeline.create(dai.node.Camera).build(rgb_socket)
         self.monoLeft = pipeline.create(dai.node.Camera).build(left_socket)
         self.monoRight = pipeline.create(dai.node.Camera).build(right_socket)
+        self.slam = pipeline.create(dai.node.RTABMapSLAM)
 
         self.stereo = pipeline.create(dai.node.StereoDepth)
         self.leftOutput = self.monoLeft.requestOutput(mono_resolution)

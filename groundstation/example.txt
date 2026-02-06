@@ -1,0 +1,5 @@
+The yellow target is 2.3668468445559867 meters up and 7.560686145657447 meters right from the bottom left corner of the east wall
+The red target is 4.894659392842273 meters up and 1.9211654573637504 meters right from the bottom left corner of the west wall
+The green target is 9.736180535772965 meters up and 9.604330875332817 meters right from the bottom left corner of the west wall
+The yellow target is 5.2632623760209265 meters up and 8.306542919449495 meters right from the bottom left corner of the south wall
+The red target is 7.555175427733302 meters up and 6.279489248361841 meters right from the bottom left corner of the west wall

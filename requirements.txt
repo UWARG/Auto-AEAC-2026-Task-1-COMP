@@ -5,4 +5,3 @@ rerun-sdk
 opencv-python
 numpy
 pymavlink
-picamera2

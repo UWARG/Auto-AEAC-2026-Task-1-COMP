@@ -25,6 +25,7 @@ class Arducam(threading.Thread):
                 colour=Colour.GREEN,
                 location=Coordinate(1.0, 2.0, 3.0),
                 direction=Direction.NORTH,
+                wall_target=False,
             )
 
             if mapped_target is not None:

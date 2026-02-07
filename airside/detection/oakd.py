@@ -25,6 +25,7 @@ class OakD(threading.Thread):
                 colour=Colour.RED,
                 location=Coordinate(1.0, 2.0, 3.0),
                 direction=Direction.NORTH,
+                wall_target=True,
             )
 
             if mapped_target is not None:

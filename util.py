@@ -68,13 +68,20 @@ class Target:
 class MappedTarget:
     """Represents a mapped target with a color, building-relative location, and cardinal direction."""
 
-    def __init__(self, colour: Colour, location: Coordinate, direction: Direction):
+    def __init__(
+        self,
+        colour: Colour,
+        location: Coordinate,
+        direction: Direction,
+        wall_target: bool = True,
+    ):
         self.colour = colour
         self.location = location
         self.direction = direction
+        self.wall_target = wall_target
 
     def __str__(self):
-        return f"(colour={self.colour}, location={self.location}, cardinal_direction={self.direction})"
+        return f"(colour={self.colour}, location (only use x,y)={self.location}, cardinal_direction={self.direction}, wall_target={self.wall_target})"
 
 
 class RCChannel:

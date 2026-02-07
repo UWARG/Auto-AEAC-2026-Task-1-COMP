@@ -25,14 +25,14 @@ class target_positions:
         for i in walls:
             wall_normal=np.array([i.normal.x,i.normal.y,i.normal.z])
             dp=np.dot(wall_normal,np.array([1,0,0]))
-            angle=math.acos(np.clip(dp/(np.linalg.norm(i.normal)*1),-1,1))
-            if abs(angle)<self.ANGLE_THRESHOLD or abs(angle)>math.pi-self.ANGLE_THRESHOLD:
+            angle=math.acos(np.clip(dp/(np.linalg.norm(wall_normal)*1),-1,1))
+            if angle<self.ANGLE_THRESHOLD or angle>math.pi-self.ANGLE_THRESHOLD:
                 if not parallel_to_x["parallel1"]:
                     parallel_to_x["parallel1"]=i
                 else:
                     if abs(parallel_to_x["parallel1"].offset)>abs(i.offset):
                         parallel_to_x["parallel2"]=parallel_to_x["parallel1"]
-                        parallel_to_x["parallel1"]=i #index 0 for object, index 1 for index
+                        parallel_to_x["parallel1"]=i
                     else:
                         parallel_to_x["parallel2"]=i
             else:

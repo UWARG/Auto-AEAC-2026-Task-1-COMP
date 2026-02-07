@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import depthai as dai
-from cameraBundle import CameraBundle
+from camera_bundle import CameraBundle
 
 fullFrameTracking = False
 

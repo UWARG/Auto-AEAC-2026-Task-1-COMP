@@ -26,8 +26,9 @@ SERIAL_PORT = "/dev/ttyAMA0"
 class MavlinkComm:
     """Handles MAVLink communication and data processing for drone control."""
 
-    def __init__(self) -> None:
+    def __init__(self, logger: logging.Logger) -> None:
         """Initialize drone connection and request data streams."""
+        self.logger = logger
         # heading in degrees
         self.heading: float | None = None
 
@@ -38,11 +39,11 @@ class MavlinkComm:
         self.post_processing_requested_flag = False
 
         while not self.__mavlink_connect():
-            logging.info("Failed to connect to drone, retrying...")
+            self.logger.info("Failed to connect to drone, retrying...")
             time.sleep(1)
 
         while not self.__request_data_streams():
-            logging.error("Failed to request data streams, retrying...")
+            self.logger.error("Failed to request data streams, retrying...")
             time.sleep(1)
 
     def __mavlink_connect(self) -> bool:
@@ -55,14 +56,14 @@ class MavlinkComm:
                 source_system=1,
             )
             self.mav.wait_heartbeat()
-            logging.info(
+            self.logger.info(
                 f"Heartbeat received from system {self.mav.target_system}, component {self.mav.target_component}"
             )
         except Exception as e:
-            logging.error(f"Failed to connect to drone: {e}")
+            self.logger.error(f"Failed to connect to drone: {e}")
             return False
 
-        logging.info("Connected to drone")
+        self.logger.info("Connected to drone")
         return True
 
     def __request_data_streams(self) -> bool:
@@ -86,9 +87,9 @@ class MavlinkComm:
                 1,  # Start streaming (1=enable, 0=disable)
             )
 
-            logging.info("Requested GLOBAL_POSITION_INT and RC_CHANNELS streams")
+            self.logger.info("Requested GLOBAL_POSITION_INT and RC_CHANNELS streams")
         except Exception as e:
-            logging.error(f"Failed to request data streams: {e}")
+            self.logger.error(f"Failed to request data streams: {e}")
             return False
 
         return True
@@ -103,7 +104,7 @@ class MavlinkComm:
             return False
 
         if msg.get_type() == MavlinkMessageType.GLOBAL_POSITION_INT.value:
-            logging.info(f"Received GLOBAL_POSITION_INT: {msg}")
+            self.logger.info(f"Received GLOBAL_POSITION_INT: {msg}")
             
             # Extract heading from hdg field (in centidegrees, convert to degrees)
             if msg.hdg != UINT16_MAX:
@@ -112,7 +113,7 @@ class MavlinkComm:
             return True
 
         elif msg.get_type() == MavlinkMessageType.RC_CHANNELS.value:
-            logging.info(f"Received RC_CHANNELS: {msg}")
+            self.logger.info(f"Received RC_CHANNELS: {msg}")
 
             # Update RC channels by reading 'chanX_raw' attributes from message
             for rc_channel_num in self.rc_channels.keys():
@@ -146,21 +147,21 @@ class MavlinkComm:
         Return NORTH if heading is unavailable.
         """
         if self.heading is None:
-            logging.warning("Position is not available")
+            self.logger.warning("Position is not available")
             return Direction.NORTH
         return self._heading_to_direction(self.heading)
 
     def get_rc_channel(self, channel: int) -> RCChannel:
         """Get RC channel data for specified channel number."""
         if channel not in self.rc_channels:
-            logging.warning(f"Channel {channel} is not available")
+            self.logger.warning(f"Channel {channel} is not available")
             return RCChannel(channel=channel, raw=0, is_active=False)
         return self.rc_channels[channel]
 
     def get_heading(self) -> float:
         """Get current drone heading in degrees, returns 0 if unavailable."""
         if self.heading is None:
-            logging.warning("Heading is not available")
+            self.logger.warning("Heading is not available")
             return 0.0
         return self.heading
 
@@ -169,7 +170,7 @@ class MavlinkComm:
     ) -> None:
         """Send target to ground station."""
         if attempt > 3:
-            logging.error("Failed to send target to ground after 3 attempts")
+            self.logger.error("Failed to send target to ground after 3 attempts")
             return
 
         try:
@@ -178,7 +179,7 @@ class MavlinkComm:
                 f"{mapped_target}".encode(),  # Convert string to bytes
             )
         except Exception as e:
-            logging.error(f"Failed to send target to ground: {e}")
+            self.logger.error(f"Failed to send target to ground: {e}")
             self.send_mapped_target(mapped_target, attempt + 1)
 
     def post_processing_requested(self) -> bool:

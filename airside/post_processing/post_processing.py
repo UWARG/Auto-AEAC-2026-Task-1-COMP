@@ -1,8 +1,9 @@
 from typing import Tuple
 
+from airside.mavlink_comm import MavlinkComm
 from util import Plane, Vector3d, Target, MappedTarget, Direction
 
-def run(db_path: str, targets_path: str, mav_comm) -> None:
+def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
     def _generate_ply(db_path: str) -> str:
         return "pointcloud.ply"
 
@@ -23,4 +24,5 @@ def run(db_path: str, targets_path: str, mav_comm) -> None:
 
     mapped_targets = _locate_targets(planes, targets, first_direction)
 
-    mav_comm.send_mapped_targets(mapped_targets)
+    for mapped_target in mapped_targets:
+        mav_comm.send_mapped_target(mapped_target)

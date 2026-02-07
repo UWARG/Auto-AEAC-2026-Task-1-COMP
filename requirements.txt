@@ -1,10 +1,8 @@
-# Global
-pytest
-pytest-mock
-pytest-xprocess
-
 black==24.2.0
 
 depthai
-rerun
+rerun-sdk
 opencv-python
+numpy
+pymavlink
+picamera2

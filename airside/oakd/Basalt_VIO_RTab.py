@@ -11,7 +11,7 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None):
         width = 640
         height = 400
         # Define sources and outputs
-        
+
         left = cameras.monoLeft
         right = cameras.monoRight
         imu = p.create(dai.node.IMU)
@@ -48,4 +48,3 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None):
         imu.out.link(odom.imu)
 
         odom.transform.link(slam.odom)
-        

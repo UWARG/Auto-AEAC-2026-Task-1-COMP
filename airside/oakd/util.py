@@ -9,18 +9,20 @@ from enum import Enum
 
 # MAVLink communication constants
 AIRSIDE_COMPONENT_ID = 191
-MAVLINK_TCP_HOST = '127.0.0.1'
+MAVLINK_TCP_HOST = "127.0.0.1"
 MAVLINK_TCP_PORT = 14550
 MAVLINK_RECEIVE_TIMEOUT_SEC = 1
 
 
 class MavlinkMessageType(Enum):
     """MAVLink message types used in drone communication"""
+
     RC_CHANNELS = "RC_CHANNELS"
 
 
 class Colour(Enum):
     """Target colors"""
+
     RED = "RED"
     GREEN = "GREEN"
     BLACK = "BLACK"
@@ -30,6 +32,7 @@ class Colour(Enum):
 
 class Direction(Enum):
     """Cardinal directions"""
+
     NORTH = "NORTH"
     SOUTH = "SOUTH"
     EAST = "EAST"
@@ -46,7 +49,7 @@ class Coordinate:
 
     def __str__(self):
         return f"({self.x}, {self.y}, {self.z})"
-    
+
 
 class Target:
     """Represents a target with a color and location."""
@@ -84,7 +87,7 @@ class Vector3d:
 
     def __str__(self):
         return f"({self.x}, {self.y}, {self.z})"
-    
+
 
 class Plane:
     """Represents a plane in 3D space defined by an offset from origin and a normal vector."""

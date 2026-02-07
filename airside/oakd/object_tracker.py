@@ -14,9 +14,9 @@ def add_object_tracker(p: dai.Pipeline, cameras: "CameraBundle" = None):
         camRgb = cameras.camRgb
         stereo = cameras.stereo
 
-        spatialDetectionNetwork = p.create(
-            dai.node.SpatialDetectionNetwork
-        ).build(camRgb, stereo, "yolov6-nano")
+        spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
+            camRgb, stereo, "yolov6-nano"
+        )
         objectTracker = p.create(dai.node.ObjectTracker)
 
         spatialDetectionNetwork.setConfidenceThreshold(0.6)

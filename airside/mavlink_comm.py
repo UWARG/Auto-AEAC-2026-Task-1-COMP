@@ -9,12 +9,9 @@ from pymavlink import mavutil
 from util import (
     AIRSIDE_COMPONENT_ID,
     UINT16_MAX,
-    Colour,
-    Coordinate,
     RCChannel,
     MavlinkMessageType,
     MappedTarget,
-    Vector3d,
     Direction,
 )
 import logging
@@ -34,7 +31,8 @@ class MavlinkComm:
         self.heading: float | None = None
 
         self.rc_channels: dict[int, RCChannel] = {
-            i: RCChannel(channel=i, raw=0, is_active=False) for i in range(7, 10)
+            i: RCChannel(channel=i, raw=0, is_active=False)
+            for i in range(0, 20)  # use 11 to 14 inclusive tho
         }
 
         self.post_processing_requested_flag = False

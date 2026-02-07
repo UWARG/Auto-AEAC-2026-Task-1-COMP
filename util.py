@@ -23,14 +23,31 @@ class MavlinkMessageType(Enum):
     RC_CHANNELS = "RC_CHANNELS"
 
 
-class Colour(Enum):
-    """Target colors"""
+class Colour:
+    def __init__(
+        self,
+        name: str,
+        lower_hsv: tuple[int, int, int],
+        upper_hsv: tuple[int, int, int],
+    ):
+        self.name = name
+        self.lower_hsv = lower_hsv
+        self.upper_hsv = upper_hsv
 
-    RED = "RED"
-    GREEN = "GREEN"
-    BLACK = "BLACK"
-    BLUE = "BLUE"
-    YELLOW = "YELLOW"
+    def __str__(self):
+        return f"({self.name}, {self.lower_hsv}, {self.upper_hsv})"
+
+    def __repr__(self):
+        return f"Colour(name={self.name}, lower_hsv={self.lower_hsv}, upper_hsv={self.upper_hsv})"
+
+
+class Colours(Enum):
+    RED = Colour("Red", (0, 100, 100), (10, 255, 255))
+    GREEN = Colour("Green", (36, 255, 255), (70, 255, 255))
+    BLACK = Colour("Black", (0, 0, 0), (255, 255, 20))
+    WHITE = Colour("White", (0, 0, 200), (255, 20, 255))
+    BLUE = Colour("Blue", (100, 100, 100), (130, 255, 255))
+    YELLOW = Colour("Yellow", (20, 100, 100), (30, 255, 255))
 
 
 class Direction(Enum):
@@ -70,7 +87,7 @@ class MappedTarget:
 
     def __init__(
         self,
-        colour: Colour,
+        colour: Colours,
         location: Coordinate,
         direction: Direction,
         wall_target: bool = True,
@@ -81,7 +98,7 @@ class MappedTarget:
         self.wall_target = wall_target
 
     def __str__(self):
-        return f"(colour={self.colour}, location (only use x,y)={self.location}, cardinal_direction={self.direction}, wall_target={self.wall_target})"
+        return f"(colour={self.colour}, location={self.location}, cardinal_direction={self.direction}, wall_target={self.wall_target})"
 
 
 class RCChannel:

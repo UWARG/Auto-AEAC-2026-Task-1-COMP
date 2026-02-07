@@ -1,7 +1,8 @@
 """Main control loop for airside system."""
 
 import logging
-import queue
+import os
+import time
 import threading
 
 from airside.detection.oakd import OakD
@@ -10,13 +11,20 @@ from airside.post_processing import post_processing
 from util import Coordinate, MappedTarget, Vector3d
 from mavlink_comm import MavlinkComm
 
+
 def main() -> None:
     """Main control loop for airside drone operations."""
     main_logger.info("Starting airside...")
 
-    detections_logger = logging.getLogger("detections")
-
     mav_comm = MavlinkComm(main_logger)
+
+    detections_logger = logging.getLogger("detections")
+    detections_logger.setLevel(logging.INFO)
+    detections_logger.propagate = False
+    detections_formatter = logging.Formatter("%(message)s")
+    detections_handler_file = logging.FileHandler("targets.txt")
+    detections_handler_file.setFormatter(detections_formatter)
+    detections_logger.addHandler(detections_handler_file)
 
     stop_event = threading.Event()
 
@@ -38,10 +46,21 @@ def main() -> None:
 
 if __name__ == "__main__":
     main_logger = logging.getLogger("main")
+    main_logger.setLevel(logging.INFO)
+    main_logger.propagate = False
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    main_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+    main_handler_console = logging.StreamHandler()
+    main_handler_console.setFormatter(main_formatter)
+    main_logger.addHandler(main_handler_console)
+
+    os.makedirs("logs", exist_ok=True)
+    main_logger_handler_file = logging.FileHandler(
+        f"logs/airside_{time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime())}.log"
     )
+    main_logger_handler_file.setFormatter(main_formatter)
+    main_logger.addHandler(main_logger_handler_file)
 
     try:
         main()

@@ -63,7 +63,8 @@ class Target:
 
     def __str__(self):
         return f"(colour={self.colour}, location={self.location})"
-    
+
+
 class MappedTarget:
     """Represents a mapped target with a color, building-relative location, and cardinal direction."""
 

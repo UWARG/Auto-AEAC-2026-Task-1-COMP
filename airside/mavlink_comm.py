@@ -23,6 +23,7 @@ import time
 
 SERIAL_PORT = "/dev/ttyAMA0"
 
+
 class MavlinkComm:
     """Handles MAVLink communication and data processing for drone control."""
 
@@ -105,7 +106,7 @@ class MavlinkComm:
 
         if msg.get_type() == MavlinkMessageType.GLOBAL_POSITION_INT.value:
             self.logger.info(f"Received GLOBAL_POSITION_INT: {msg}")
-            
+
             # Extract heading from hdg field (in centidegrees, convert to degrees)
             if msg.hdg != UINT16_MAX:
                 self.heading = msg.hdg / 100.0
@@ -129,7 +130,7 @@ class MavlinkComm:
             return True
 
         return False
-    
+
     def _heading_to_direction(self, heading: float) -> Direction:
         """Convert heading in degrees to cardinal direction."""
         if 45 <= heading < 135:
@@ -165,9 +166,7 @@ class MavlinkComm:
             return 0.0
         return self.heading
 
-    def send_mapped_target(
-        self, mapped_target: MappedTarget, attempt: int = 0
-    ) -> None:
+    def send_mapped_target(self, mapped_target: MappedTarget, attempt: int = 0) -> None:
         """Send target to ground station."""
         if attempt > 3:
             self.logger.error("Failed to send target to ground after 3 attempts")

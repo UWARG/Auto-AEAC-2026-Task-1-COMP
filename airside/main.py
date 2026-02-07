@@ -13,7 +13,7 @@ from mavlink_comm import MavlinkComm
 
 
 def main() -> None:
-    """Main control loop for airside drone operations."""
+    """Main control loop for airside arch."""
     main_logger.info("Starting airside...")
 
     mav_comm = MavlinkComm(main_logger)
@@ -21,7 +21,9 @@ def main() -> None:
     detections_logger = logging.getLogger("detections")
     detections_logger.setLevel(logging.INFO)
     detections_logger.propagate = False
+
     detections_formatter = logging.Formatter("%(message)s")
+
     detections_handler_file = logging.FileHandler("targets.txt")
     detections_handler_file.setFormatter(detections_formatter)
     detections_logger.addHandler(detections_handler_file)

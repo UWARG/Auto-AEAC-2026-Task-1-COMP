@@ -107,20 +107,3 @@ class target_positions:
                 angle=math.acos(dp/(np.linalg.norm(vector)*np.linalg.norm(ground_vector)))
                 if angle>math.pi/2-self.ANGLE_THRESHOLD and angle<math.pi/2+self.ANGLE_THRESHOLD:
                     
-            
-            
-
-                
-
-            
-
-
-        
-            
-            
-
-    
-        
-        
-
-

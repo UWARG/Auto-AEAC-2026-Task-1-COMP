@@ -52,7 +52,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
                 if not parallel_to_x["perp1"]:
                     parallel_to_x["perp1"]=i
                 else:
-                    if (parallel_to_x["perp1"].normal.y>i.normal.y):
+                    if (parallel_to_x["perp1"].offset>i.offset):
                         parallel_to_x["perp2"]=i
                     else:
                         parallel_to_x["perp2"]=parallel_to_x["perp1"]
@@ -95,10 +95,11 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
         
         target_locations=[]
         for i in targets:
+            target_on_wall=False
             target=np.array([i.location.x,
                              i.location.y,
                              i.location.z])
-            for j,k in zip(bottom_corners,parallel_to_x):
+            for j,k in zip(bottom_corners,list(parallel_to_x.values())[0:3]):
                 vector=np.subtract(target,j)
                 normal_vector=np.array([k.normal.x,
                                         k.normal.y,
@@ -112,7 +113,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
                         right,up=(vector[0],vector[2])
                     target_on_wall=True
                     index=direction.index(first_direction)
-                    index2=list(wall_direction).index(k)
+                    index2=list(direction).index(k)
                     wall_direction=direction[index+index2]
                     relative_position=Coordinate(right,0,up)
                     target_locations.append(MappedTarget(i.colour,relative_position,Direction[wall_direction],False))
@@ -123,12 +124,12 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
             #want to find corner regions 
             if not target_on_wall:
                 wall=None
-                if i.location.y>parallel_to_x["perp1"].normal.x:
-                    if (i.location.x>parallel_to_x["parallel2"].normal.x):
+                if i.location.y>parallel_to_x["perp1"].offset/parallel_to_x["perp1"].normal.y:
+                    if (i.location.x>parallel_to_x["parallel2"].offset/parallel_to_x["parallel2"].normal.x):
                         vector=np.subtract(target,bottom_corners[1]) #index for left corner of perp 1/ bottom right corner
                         position=(-abs(vector[0]),abs(vector[1]))
                         wall=parallel_to_x["perp1"]
-                    elif (i.location.x<parallel_to_x["parallel1"].normal.x):
+                    elif (i.location.x<parallel_to_x["parallel1"].offset/parallel_to_x["parallel1"].normal.x):
                         vector=np.subtract(target,bottom_corners[0]) #left corner for parallel 1
                         position=(-abs(vector[1]),abs(vector[0]))
                         wall=parallel_to_x["parallel1"]
@@ -137,12 +138,12 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
                         position=(abs(vector[0]),abs(vector[1])) 
                         wall=parallel_to_x["perp1"]
 
-                elif i.location.y<parallel_to_x["perp2"].normal.x:
-                    if (i.location.x>parallel_to_x["parallel2"].normal.x):
+                elif i.location.y<parallel_to_x["perp2"].offset/parallel_to_x["perp2"].normal.y:
+                    if (i.location.x>parallel_to_x["parallel2"].offset/parallel_to_x["parallel2"].normal.x):
                         vector=np.subtract(target,bottom_corners[2]) #left corner for perp 2
                         position=(-abs(vector[0]),abs(vector[1]))
                         wall=parallel_to_x["perp2"]
-                    elif (i.location.x<parallel_to_x["parallel1"].normal.x):
+                    elif (i.location.x<parallel_to_x["parallel1"].offset/parallel_to_x["parallel1"].normal.x):
                         vector=np.subtract(target,bottom_corners[3]) #left corner for parallel 2
                         position=(-abs(vector[1]),abs(vector[0]))
                         wall=parallel_to_x["parallel2"]
@@ -152,10 +153,10 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
                         wall=parallel_to_x["perp2"]
                 #for in between two perpendicular walls
                 else:
-                    if (i.location.x>parallel_to_x["parallel2"].normal.x):
+                    if (i.location.x>parallel_to_x["parallel2"]/parallel_to_x["parallel2"].normal.x):
                         vector=np.subtract(target,bottom_corners[3])
                         wall=parallel_to_x["parallel2"]
-                    elif (i.location.x<parallel_to_x["parallel1"].normal.x):
+                    elif (i.location.x<parallel_to_x["parallel1"]/parallel_to_x["parallel1"].normal.x):
                         vector=np.subtract(target,bottom_corners[0])
                         wall=parallel_to_x["parallel1"]
                     position=(abs(vector[1]),abs(vector[0]))

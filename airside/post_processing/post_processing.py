@@ -139,7 +139,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
                     elif abs(vector[1]) < PARALLEL_THRESHOLD:
                         right, up = vector[0], vector[2]
                     target_on_wall = True
-                    index = direction.index(first_direction)
+                    index = direction.index(first_direction.value)
                     index2 = list(parallel_to_x.values()).index(k)
                     wall_direction = direction[index + index2]
                     relative_position = Coordinate(right, 0, up)
@@ -215,7 +215,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
                     position = (abs(vector[1]), abs(vector[0]))
 
                 # create new dictionary
-                index = direction.index(first_direction)
+                index = direction.index(first_direction.value)
                 index2 = list(parallel_to_x.values()).index(wall)
                 wall_direction = direction[index + index2]
                 relative_position = Coordinate(*position, 0)

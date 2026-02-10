@@ -1,5 +1,5 @@
 import depthai as dai
-from cameraBundle import CameraBundle
+from camera_bundle import CameraBundle
 
 
 # Create pipeline

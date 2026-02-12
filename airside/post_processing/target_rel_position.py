@@ -2,9 +2,10 @@ import numpy as np
 import math
 from util import Plane, Target, MappedTarget, Direction, Coordinate, Colours
 
+
 def locate_targets(
-        planes: list[Plane], targets: list[Target], first_direction: Direction
-)-> list[MappedTarget]:
+    planes: list[Plane], targets: list[Target], first_direction: Direction
+) -> list[MappedTarget]:
 
     MARGIN = 0.5
     ANGLE_THRESHOLD = 0.087  # ~= 5 degrees
@@ -110,7 +111,9 @@ def locate_targets(
                 angle > math.pi / 2 - ANGLE_THRESHOLD
                 and angle < math.pi / 2 + ANGLE_THRESHOLD
             ):
-                if abs(vector[0]) < PARALLEL_THRESHOLD or abs(vector[0])<abs(vector[1]):
+                if abs(vector[0]) < PARALLEL_THRESHOLD or abs(vector[0]) < abs(
+                    vector[1]
+                ):
                     right, up = abs(vector[1]), abs(vector[2])
                     relative_position = Coordinate(0, right, up)
                 else:

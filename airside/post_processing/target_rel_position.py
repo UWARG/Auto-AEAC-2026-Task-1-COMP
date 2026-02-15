@@ -14,8 +14,8 @@ def locate_targets(
     walls = {
         "close_x_wall": None,  # wall with cardinal direction, as first index in ordered dict
         "negative_y_wall": None,
-        "positive_y_wall": None,
         "far_x_wall": None,
+        "positive_y_wall": None,
     }
     ground_vector = None
     ground_offset = None
@@ -101,7 +101,7 @@ def locate_targets(
         target_vector = np.array(
             [target.location.x, target.location.y, target.location.z]
         )
-        for corner, wall in zip(bottom_corners, list(walls.values())[0:4]):
+        for corner, wall in zip(bottom_corners, list(walls.values())):
             vector = np.subtract(target_vector, corner)
             normal_vector = np.array([wall.normal.x, wall.normal.y, wall.normal.z])
             dp = np.dot(vector, normal_vector)

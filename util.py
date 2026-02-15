@@ -7,6 +7,8 @@ including local coordinate representation, MAVLink message types, and RC channel
 
 from enum import Enum
 
+UINT16_MAX = 65535
+
 # MAVLink communication constants
 AIRSIDE_COMPONENT_ID = 191
 MAVLINK_TCP_HOST = "127.0.0.1"
@@ -17,17 +19,35 @@ MAVLINK_RECEIVE_TIMEOUT_SEC = 1
 class MavlinkMessageType(Enum):
     """MAVLink message types used in drone communication"""
 
+    GLOBAL_POSITION_INT = "GLOBAL_POSITION_INT"
     RC_CHANNELS = "RC_CHANNELS"
 
 
-class Colour(Enum):
-    """Target colors"""
+class Colour:
+    def __init__(
+        self,
+        name: str,
+        lower_hsv: tuple[int, int, int],
+        upper_hsv: tuple[int, int, int],
+    ):
+        self.name = name
+        self.lower_hsv = lower_hsv
+        self.upper_hsv = upper_hsv
 
-    RED = "RED"
-    GREEN = "GREEN"
-    BLACK = "BLACK"
-    BLUE = "BLUE"
-    YELLOW = "YELLOW"
+    def __str__(self):
+        return f"({self.name}, {self.lower_hsv}, {self.upper_hsv})"
+
+    def __repr__(self):
+        return f"Colour(name={self.name}, lower_hsv={self.lower_hsv}, upper_hsv={self.upper_hsv})"
+
+
+class Colours(Enum):
+    RED = Colour("Red", (0, 100, 100), (10, 255, 255))
+    GREEN = Colour("Green", (36, 255, 255), (70, 255, 255))
+    BLACK = Colour("Black", (0, 0, 0), (255, 255, 20))
+    WHITE = Colour("White", (0, 0, 200), (255, 20, 255))
+    BLUE = Colour("Blue", (100, 100, 100), (130, 255, 255))
+    YELLOW = Colour("Yellow", (20, 100, 100), (30, 255, 255))
 
 
 class Direction(Enum):
@@ -62,6 +82,25 @@ class Target:
         return f"(colour={self.colour}, location={self.location})"
 
 
+class MappedTarget:
+    """Represents a mapped target with a color, building-relative location, and cardinal direction."""
+
+    def __init__(
+        self,
+        colour: Colours,
+        location: Coordinate,
+        direction: Direction,
+        wall_target: bool = True,
+    ):
+        self.colour = colour
+        self.location = location
+        self.direction = direction
+        self.wall_target = wall_target
+
+    def __str__(self):
+        return f"(colour={self.colour}, location={self.location}, cardinal_direction={self.direction}, wall_target={self.wall_target})"
+
+
 class RCChannel:
     """Represents a single RC channel with raw value and activity status."""
 
@@ -92,9 +131,9 @@ class Vector3d:
 class Plane:
     """Represents a plane in 3D space defined by an offset from origin and a normal vector."""
 
-    def __init__(self, offset: float, normal: Vector3d):
-        self.offset = offset
+    def __init__(self, normal: Vector3d, offset: float):
         self.normal = normal
+        self.offset = offset
 
     def __str__(self):
         return f"(offset={self.offset}, normal={self.normal})"

@@ -7,7 +7,7 @@ def locate_targets(
     planes: list[Plane], targets: list[Target], first_direction: Direction
 ) -> list[MappedTarget]:
 
-    MARGIN = 0.5 # Margin of error in meteres where anything below this value can be considered negligeble
+    MARGIN = 0.5  # Margin of error in meteres where anything below this value can be considered negligeble
     ANGLE_THRESHOLD = 0.087  # ~= 5 degrees
 
     bottom_corners = []
@@ -17,14 +17,14 @@ def locate_targets(
         "positive_y_wall": None,
         "far_x_wall": None,
     }
-    ground_vector=None
-    ground_offset=None
+    ground_vector = None
+    ground_offset = None
     direction = ["NORTH", "EAST", "SOUTH", "WEST", "NORTH", "EAST", "SOUTH", "WEST"]
     for plane in planes:
         plane_normal = np.array([plane.normal.x, plane.normal.y, plane.normal.z])
         if plane_normal[2] > MARGIN:  # if normal has some z component
-            ground_vector=plane_normal
-            ground_offset=plane.offset
+            ground_vector = plane_normal
+            ground_offset = plane.offset
             continue
         dp = np.dot(plane_normal, np.array([1, 0, 0]))
         angle = math.acos(np.clip(dp / (np.linalg.norm(plane_normal)), -1, 1))
@@ -43,7 +43,7 @@ def locate_targets(
                 walls["negative_y_wall"] = plane
             else:
                 if (
-                    plane.normal.y>0
+                    plane.normal.y > 0
                 ):  # we only have to divide by normal.y for perp walls since their normals are opposite direction
                     walls["positive_y_wall"] = plane
                 else:
@@ -86,19 +86,21 @@ def locate_targets(
         )
         corner = np.linalg.solve(matrix, b)
         corner2 = np.linalg.solve(matrix2, b2)
-        #order corners to go clockwise as index increases
-        if wall.normal.y<0:
+        # order corners to go clockwise as index increases
+        if wall.normal.y < 0:
             bottom_corners.append(corner)  # front corner
             bottom_corners.append(corner2)  # back corner
         else:
-            bottom_corners.append(corner2) #back corner
-            bottom_corners.append(corner) #front corner
+            bottom_corners.append(corner2)  # back corner
+            bottom_corners.append(corner)  # front corner
 
-    target_locations = [] #j=corner, wall=k
+    target_locations = []  # j=corner, wall=k
     for target in targets:
         right, up = 0, 0
         target_on_wall = False
-        target_vector = np.array([target.location.x, target.location.y, target.location.z])
+        target_vector = np.array(
+            [target.location.x, target.location.y, target.location.z]
+        )
         for corner, wall in zip(bottom_corners, list(walls.values())[0:4]):
             vector = np.subtract(target_vector, corner)
             normal_vector = np.array([wall.normal.x, wall.normal.y, wall.normal.z])
@@ -107,19 +109,17 @@ def locate_targets(
                 dp / (np.linalg.norm(vector) * np.linalg.norm(normal_vector))
             )
 
-            if (
-                abs(math.pi/2 - angle) < ANGLE_THRESHOLD
-            ):
-                if (abs(vector[0]) < MARGIN or abs(vector[0]) < abs(
-                    vector[1]) 
-                ):
+            if abs(math.pi / 2 - angle) < ANGLE_THRESHOLD:
+                if abs(vector[0]) < MARGIN or abs(vector[0]) < abs(vector[1]):
 
                     right, up = abs(vector[1]), abs(vector[2])
                     relative_position = Coordinate(right, up, 0)
                 else:
                     right, up = abs(vector[0]), abs(vector[2])
                     relative_position = Coordinate(right, up, 0)
-                if vector[2]<min(abs(vector[0]),abs(vector[1])): #more likely to be on the ground so continue
+                if vector[2] < min(
+                    abs(vector[0]), abs(vector[1])
+                ):  # more likely to be on the ground so continue
                     continue
                 target_on_wall = True
                 index = direction.index(first_direction.value)
@@ -146,21 +146,15 @@ def locate_targets(
                 < walls["negative_y_wall"].offset / walls["negative_y_wall"].normal.y
             ):
                 if target.location.x > walls["far_x_wall"].offset:
-                    vector = np.subtract(
-                        target_vector, bottom_corners[2]
-                    )
+                    vector = np.subtract(target_vector, bottom_corners[2])
                     position = (abs(vector[1]), abs(vector[0]))
                     wall = walls["far_x_wall"]
                 elif target.location.x < walls["close_x_wall"].offset:
-                    vector = np.subtract(
-                        target_vector, bottom_corners[1]
-                    )
+                    vector = np.subtract(target_vector, bottom_corners[1])
                     position = (abs(vector[0]), abs(vector[1]))
                     wall = walls["negative_y_wall"]
                 else:
-                    vector = np.subtract(
-                        target_vector, bottom_corners[1]
-                    )
+                    vector = np.subtract(target_vector, bottom_corners[1])
                     position = (abs(vector[0]), abs(vector[1]))
                     wall = walls["negative_y_wall"]
 
@@ -169,9 +163,7 @@ def locate_targets(
                 > walls["positive_y_wall"].offset / walls["positive_y_wall"].normal.y
             ):
                 if target.location.x > walls["far_x_wall"].offset:
-                    vector = np.subtract(
-                        target_vector, bottom_corners[3]
-                    )  
+                    vector = np.subtract(target_vector, bottom_corners[3])
                     position = (abs(vector[0]), abs(vector[1]))
                     wall = walls["positive_y_wall"]
                 elif target.location.x < walls["close_x_wall"].offset:
@@ -194,19 +186,21 @@ def locate_targets(
                     vector = np.subtract(target_vector, bottom_corners[0])
                     wall = walls["close_x_wall"]
                     position = (abs(vector[1]), abs(vector[0]))
-                #for slight imperfections within margin of error
-                elif (abs(target.location.x-walls["close_x_wall"].offset)<MARGIN or 
-                abs(target.location.x-walls["far_x_wall"].offset)<MARGIN):
-                    vector=np.subtract(target_vector,bottom_corners[0])
-                    vector2=np.subtract(target_vector,bottom_corners[2])
-                    if np.linalg.norm(vector)<np.linalg.norm(vector2):
-                        position=(abs(vector[1]),-abs(vector[0]))
-                        wall=walls["close_x_wall"]
+                # for slight imperfections within margin of error
+                elif (
+                    abs(target.location.x - walls["close_x_wall"].offset) < MARGIN
+                    or abs(target.location.x - walls["far_x_wall"].offset) < MARGIN
+                ):
+                    vector = np.subtract(target_vector, bottom_corners[0])
+                    vector2 = np.subtract(target_vector, bottom_corners[2])
+                    if np.linalg.norm(vector) < np.linalg.norm(vector2):
+                        position = (abs(vector[1]), -abs(vector[0]))
+                        wall = walls["close_x_wall"]
                     else:
-                        position=(abs(vector2[1]),-abs(vector2[0]))
-                        wall=walls["far_x_wall"]
-                
-                else: #otherwise invalid
+                        position = (abs(vector2[1]), -abs(vector2[0]))
+                        wall = walls["far_x_wall"]
+
+                else:  # otherwise invalid
                     raise Exception(f"Invalid target location {target.location}")
 
             index = direction.index(first_direction.value)

@@ -22,7 +22,7 @@ def locate_targets(
     direction = ["NORTH", "EAST", "SOUTH", "WEST", "NORTH", "EAST", "SOUTH", "WEST"]
     for plane in planes:
         plane_normal = np.array([plane.normal.x, plane.normal.y, plane.normal.z])
-        if plane_normal[2] > MARGIN:  # if normal has some z component
+        if abs(plane_normal[2]) > MARGIN:  # if normal has some z component
             ground_vector = plane_normal
             ground_offset = plane.offset
             continue
@@ -32,7 +32,9 @@ def locate_targets(
             if not walls["close_x_wall"]:
                 walls["close_x_wall"] = plane
             else:
-                if abs(walls["close_x_wall"].offset) > abs(plane.offset):
+                if abs(
+                    walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
+                ) > abs(plane.offset):
                     walls["far_x_wall"] = walls["close_x_wall"]
                     walls["close_x_wall"] = plane
                 else:
@@ -106,7 +108,9 @@ def locate_targets(
             normal_vector = np.array([wall.normal.x, wall.normal.y, wall.normal.z])
             dp = np.dot(vector, normal_vector)
             angle = math.acos(
-                dp / (np.linalg.norm(vector) * np.linalg.norm(normal_vector))
+                np.clip(
+                    dp / (np.linalg.norm(vector) * np.linalg.norm(normal_vector)), -1, 1
+                )
             )
 
             if abs(math.pi / 2 - angle) < ANGLE_THRESHOLD:
@@ -117,7 +121,7 @@ def locate_targets(
                 else:
                     right, up = abs(vector[0]), abs(vector[2])
                     relative_position = Coordinate(right, up, 0)
-                if vector[2] < min(
+                if abs(vector[2]) < min(
                     abs(vector[0]), abs(vector[1])
                 ):  # more likely to be on the ground so continue
                     continue
@@ -145,11 +149,17 @@ def locate_targets(
                 target.location.y
                 < walls["negative_y_wall"].offset / walls["negative_y_wall"].normal.y
             ):
-                if target.location.x > walls["far_x_wall"].offset:
+                if (
+                    target.location.x
+                    > walls["far_x_wall"].offset / walls["far_x_wall"].normal.x
+                ):
                     vector = np.subtract(target_vector, bottom_corners[2])
                     position = (abs(vector[1]), abs(vector[0]))
                     wall = walls["far_x_wall"]
-                elif target.location.x < walls["close_x_wall"].offset:
+                elif (
+                    target.location.x
+                    < walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
+                ):
                     vector = np.subtract(target_vector, bottom_corners[1])
                     position = (abs(vector[0]), abs(vector[1]))
                     wall = walls["negative_y_wall"]
@@ -162,11 +172,17 @@ def locate_targets(
                 target.location.y
                 > walls["positive_y_wall"].offset / walls["positive_y_wall"].normal.y
             ):
-                if target.location.x > walls["far_x_wall"].offset:
+                if (
+                    target.location.x
+                    > walls["far_x_wall"].offset / walls["far_x_wall"].normal.x
+                ):
                     vector = np.subtract(target_vector, bottom_corners[3])
                     position = (abs(vector[0]), abs(vector[1]))
                     wall = walls["positive_y_wall"]
-                elif target.location.x < walls["close_x_wall"].offset:
+                elif (
+                    target.location.x
+                    < walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
+                ):
                     vector = np.subtract(
                         target_vector, bottom_corners[0]
                     )  # left corner for parallel 2
@@ -178,26 +194,42 @@ def locate_targets(
                     wall = walls["positive_y_wall"]
             # for in between two perpendicular walls
             else:
-                if target.location.x > walls["far_x_wall"].offset:
+                if (
+                    target.location.x
+                    > walls["far_x_wall"].offset / walls["far_x_wall"].normal.x
+                ):
                     vector = np.subtract(target_vector, bottom_corners[2])
                     wall = walls["far_x_wall"]
                     position = (abs(vector[1]), abs(vector[0]))
-                elif target.location.x < walls["close_x_wall"].offset:
+                elif (
+                    target.location.x
+                    < walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
+                ):
                     vector = np.subtract(target_vector, bottom_corners[0])
                     wall = walls["close_x_wall"]
                     position = (abs(vector[1]), abs(vector[0]))
                 # for slight imperfections within margin of error
                 elif (
-                    abs(target.location.x - walls["close_x_wall"].offset) < MARGIN
-                    or abs(target.location.x - walls["far_x_wall"].offset) < MARGIN
+                    abs(
+                        target.location.x
+                        - walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
+                    )
+                    < MARGIN
+                    or abs(
+                        target.location.x
+                        - walls["far_x_wall"].offset / walls["far_x_wall"].normal.x
+                    )
+                    < MARGIN
                 ):
                     vector = np.subtract(target_vector, bottom_corners[0])
                     vector2 = np.subtract(target_vector, bottom_corners[2])
                     if np.linalg.norm(vector) < np.linalg.norm(vector2):
-                        position = (abs(vector[1]), -abs(vector[0]))
+                        # change to position = (abs(vector[1]), -abs(vector[0])) if you want a negative value for position's forward value
+                        position = (abs(vector[1]), 0)
                         wall = walls["close_x_wall"]
                     else:
-                        position = (abs(vector2[1]), -abs(vector2[0]))
+                        # change to position = (abs(vector2[1]), -abs(vector2[0]))if you want a negative value for position's forward value
+                        position = (abs(vector2[1]), 0)
                         wall = walls["far_x_wall"]
 
                 else:  # otherwise invalid

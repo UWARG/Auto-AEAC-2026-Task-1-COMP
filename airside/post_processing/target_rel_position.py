@@ -19,7 +19,7 @@ def locate_targets(
     }
     ground_vector = None
     ground_offset = None
-    direction = ["NORTH", "EAST", "SOUTH", "WEST", "NORTH", "EAST", "SOUTH", "WEST"]
+    direction = ["NORTH", "EAST", "SOUTH", "WEST"]
     for plane in planes:
         plane_normal = np.array([plane.normal.x, plane.normal.y, plane.normal.z])
         if abs(plane_normal[2]) > MARGIN:  # if normal has some z component
@@ -96,7 +96,7 @@ def locate_targets(
             bottom_corners.append(corner2)  # back corner
             bottom_corners.append(corner)  # front corner
 
-    target_locations = []  # j=corner, wall=k
+    target_locations = []
     for target in targets:
         right, up = 0, 0
         target_on_wall = False
@@ -128,7 +128,7 @@ def locate_targets(
                 target_on_wall = True
                 index = direction.index(first_direction.value)
                 index2 = list(walls.values()).index(wall)
-                wall_direction = direction[index + index2]
+                wall_direction = direction[(index + index2) % 4]
                 target_locations.append(
                     MappedTarget(
                         Colours[target.colour.name.upper()],
@@ -183,9 +183,7 @@ def locate_targets(
                     target.location.x
                     < walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
                 ):
-                    vector = np.subtract(
-                        target_vector, bottom_corners[0]
-                    )  # left corner for parallel 2
+                    vector = np.subtract(target_vector, bottom_corners[0])
                     position = (abs(vector[1]), abs(vector[0]))
                     wall = walls["close_x_wall"]
                 else:
@@ -237,7 +235,7 @@ def locate_targets(
 
             index = direction.index(first_direction.value)
             index2 = list(walls.values()).index(wall)
-            wall_direction = direction[index + index2]
+            wall_direction = direction[(index + index2) % 4]
             relative_position = Coordinate(*position, 0)
 
             target_locations.append(

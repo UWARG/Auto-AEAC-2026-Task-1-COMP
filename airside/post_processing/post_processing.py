@@ -1,7 +1,9 @@
 from typing import Tuple
 
 from airside.mavlink_comm import MavlinkComm
-from util import Plane, Vector3d, Target, MappedTarget, Direction
+import numpy as np
+from util import Plane, Vector3d, Target, MappedTarget, Direction, Coordinate, Colours
+from airside.post_processing import target_rel_position
 
 
 def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
@@ -17,7 +19,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
     def _locate_targets(
         planes: list[Plane], targets: list[Target], first_direction: Direction
     ) -> list[MappedTarget]:
-        return []
+        return target_rel_position.locate_targets(planes, targets, first_direction)
 
     ply_path = _generate_ply(db_path)
 

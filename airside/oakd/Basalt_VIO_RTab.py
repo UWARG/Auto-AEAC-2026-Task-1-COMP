@@ -39,8 +39,8 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None):
         stereo.initialConfig.setLeftRightCheckThreshold(10)
         stereo.setDepthAlign(dai.CameraBoardSocket.CAM_B)
 
-        left.requestOutput((width, height)).link(stereo.left)
-        right.requestOutput((width, height)).link(stereo.right)
+        #left.requestOutput((width, height)).link(stereo.left)
+        #right.requestOutput((width, height)).link(stereo.right)
         stereo.syncedLeft.link(odom.left)
         stereo.syncedRight.link(odom.right)
         stereo.depth.link(slam.depth)

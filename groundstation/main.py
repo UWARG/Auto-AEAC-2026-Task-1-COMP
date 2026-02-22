@@ -22,7 +22,6 @@ from pathlib import Path
 import sys
 from groundstation.MavlinkReceiver import MavlinkReciever
 
-
 CONNECTION_STRING = "tcpin:localhost:1400"
 COLORS = {"r": "red", "b": "black", "u": "blue", "y": "yellow", "g": "green"}
 DIRECTIONS = {"n": "north", "s": "south", "w": "west", "e": "east"}

@@ -17,7 +17,6 @@ from util import (
 import logging
 import time
 
-
 SERIAL_PORT = "/dev/ttyAMA0"
 
 

@@ -137,3 +137,14 @@ class Plane:
 
     def __str__(self):
         return f"(offset={self.offset}, normal={self.normal})"
+
+class Quaternion:
+    """Represents a quaternion in 3D space with w, x, y, z components"""
+    def __init__(self, q0: float, q1: float, q2: float, q3: float):
+        self.q0 = q0
+        self.q1 = q1
+        self.q2 = q2
+        self.q3 = q3
+
+    def __str__(self):
+        return f"(q0: {self.q0}, q1: {self.q1}, q2: {self.q2}, q3: {self.q3})"

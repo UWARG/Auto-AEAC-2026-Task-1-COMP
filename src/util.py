@@ -69,10 +69,10 @@ class Coordinate:
 
     def __str__(self):
         return f"({self.x}, {self.y}, {self.z})"
-    
+
     def __eq__(self, other):
-        if(self.x == other.x and self.y == other.y and self.z == other.z):
-            return True 
+        if self.x == other.x and self.y == other.y and self.z == other.z:
+            return True
         else:
             return False
 
@@ -161,7 +161,12 @@ class Quaternion:
         return [self.w, self.x, self.y, self.z]
 
     def __eq__(self, other):
-        if(self.w == other.w and self.x == other.x and self.y == other.y and self.z == other.z):
-            return True 
+        if (
+            self.w == other.w
+            and self.x == other.x
+            and self.y == other.y
+            and self.z == other.z
+        ):
+            return True
         else:
             return False

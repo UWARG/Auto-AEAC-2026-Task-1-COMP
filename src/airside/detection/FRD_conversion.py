@@ -2,6 +2,7 @@ from util import Coordinate, Quaternion
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+
 def convert_target_to_FRD(
     cam_target_coord: Coordinate, origin_cam_q: Quaternion, origin_cam_coord: Coordinate
 ) -> Coordinate:
@@ -22,7 +23,9 @@ def convert_target_to_FRD(
         [origin_cam_coord.x, origin_cam_coord.y, origin_cam_coord.z]
     )
 
-    rotation_matrix = Rotation.from_quat(quat=origin_cam_q.to_array(), scalar_first=True).as_matrix()
+    rotation_matrix = Rotation.from_quat(
+        quat=origin_cam_q.to_array(), scalar_first=True
+    ).as_matrix()
 
     # Rotate the vector from the target by the quaternion that the drone currently facing to get vector from drone to target in origin coordinates
     cam_to_target_vec = rotation_matrix @ cam_to_target_vec

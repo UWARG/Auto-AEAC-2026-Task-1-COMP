@@ -1,6 +1,7 @@
 import pytest
-from util import Coordinate, Quaternion 
+from util import Coordinate, Quaternion
 from airside.detection.FRD_conversion import convert_target_to_FRD
+
 
 def test_zero_conversion():
     camera_to_target = Coordinate(0, 0, 0)
@@ -15,6 +16,7 @@ def test_zero_conversion():
     assert expected.x == pytest.approx(result.x)
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
+
 
 def test_2d_simple_conversion():
     camera_to_target = Coordinate(10, 0, 0)
@@ -31,6 +33,7 @@ def test_2d_simple_conversion():
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
 
+
 def test_2d_complex_conversion():
     camera_to_target = Coordinate(10, 10, 10)
     drone_rotation = Quaternion(1, 1, 1, 1)
@@ -45,4 +48,3 @@ def test_2d_complex_conversion():
     assert expected.x == pytest.approx(result.x)
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
-

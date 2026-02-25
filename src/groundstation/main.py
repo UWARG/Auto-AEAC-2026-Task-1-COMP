@@ -25,7 +25,7 @@ from groundstation.MavlinkReceiver import MavlinkReciever
 CONNECTION_STRING = "tcpin:localhost:1400"
 COLORS = {"r": "red", "b": "black", "u": "blue", "y": "yellow", "g": "green"}
 DIRECTIONS = {"n": "north", "s": "south", "w": "west", "e": "east"}
-TESTING_MODULE = "groundstation.message_test"
+TESTING_MODULE = "groundstation.message_testing"
 
 
 def test() -> None:

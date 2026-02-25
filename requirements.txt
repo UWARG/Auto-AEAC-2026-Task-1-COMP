@@ -5,3 +5,4 @@ rerun-sdk
 opencv-python
 numpy
 pymavlink
+scipy

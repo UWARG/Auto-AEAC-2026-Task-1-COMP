@@ -140,7 +140,7 @@ class Plane:
 
 
 class Quaternion:
-    """Represents a quaternion in 3D space with w, x, y, z components"""
+    """Represents a quaternion in 3D space with q0, q1, q2, q3 components"""
 
     def __init__(self, q0: float, q1: float, q2: float, q3: float):
         self.q0 = q0

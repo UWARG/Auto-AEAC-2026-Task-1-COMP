@@ -70,6 +70,12 @@ class Coordinate:
     def __str__(self):
         return f"({self.x}, {self.y}, {self.z})"
 
+    def __eq__(self, other):
+        if self.x == other.x and self.y == other.y and self.z == other.z:
+            return True
+        else:
+            return False
+
 
 class Target:
     """Represents a target with a color and location."""
@@ -137,3 +143,30 @@ class Plane:
 
     def __str__(self):
         return f"(offset={self.offset}, normal={self.normal})"
+
+
+class Quaternion:
+    """Represents a quaternion in 3D space with w, x, y, z components"""
+
+    def __init__(self, w: float, x: float, y: float, z: float):
+        self.w = w
+        self.x = x
+        self.y = y
+        self.z = z
+
+    def __str__(self):
+        return f"(w: {self.w}, x: {self.x}, y: {self.y}, z: {self.z})"
+
+    def to_array(self) -> list[float]:
+        return [self.w, self.x, self.y, self.z]
+
+    def __eq__(self, other):
+        if (
+            self.w == other.w
+            and self.x == other.x
+            and self.y == other.y
+            and self.z == other.z
+        ):
+            return True
+        else:
+            return False

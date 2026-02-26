@@ -1,7 +1,6 @@
 from airside.post_processing import target_rel_position
 from util import Plane, Vector3d, Target, MappedTarget, Direction, Coordinate, Colours
 
-
 # Testing values 1
 planes = []
 planes.append(Plane(Vector3d(x=1, y=0, z=0), 2))  # x_near

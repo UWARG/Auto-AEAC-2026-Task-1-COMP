@@ -1,9 +1,0 @@
-black==24.2.0
-
-depthai
-rerun-sdk
-opencv-python
-numpy
-pymavlink
-scipy
-pytest

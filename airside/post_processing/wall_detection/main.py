@@ -18,7 +18,7 @@ with dai.Pipeline() as p:
     odom = p.create(dai.node.RTABMapVIO)
     slam = p.create(dai.node.RTABMapSLAM)
 
-    slam.setDatabasePath('./rtabmap.db')
+    slam.setDatabasePath('./rtabmap.ply')
     start_time = time.time()
 
     params = {"RGBD/CreateOccupancyGrid": "true",

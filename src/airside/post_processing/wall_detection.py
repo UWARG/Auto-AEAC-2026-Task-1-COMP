@@ -1,7 +1,6 @@
 import open3d as o3d
 import numpy as np
 import random
-import os
 
 def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
     """
@@ -40,7 +39,7 @@ def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
 
     return True
 
-def find_walls_highlight_random_colors(filename):
+def find_walls(filename):
 
     print(f"Loading {filename}...")
     pcd = o3d.io.read_point_cloud(filename)
@@ -182,7 +181,9 @@ def find_walls_highlight_random_colors(filename):
     print("\n Visualizing all walls...")
     visual_elements = []
 
+    walls = [] 
     for i, wall_group in enumerate(merged_walls):
+        # combined_cloud = o3d.geometry.PointCloud()
         combined_cloud = o3d.geometry.PointCloud()
         for cloud in wall_group['clouds']:
             combined_cloud += cloud
@@ -198,10 +199,12 @@ def find_walls_highlight_random_colors(filename):
         total_points = len(combined_cloud.points)
         
         print(f"Wall {i+1} | Points: {total_points} |Normal (X, Y, Z): [{normal[0]:.3f}, {normal[1]:.3f}, {normal[2]:.3f}]")
+        walls.append([normal[0], normal[1], normal[2]])
+    
+    return walls
+    # o3d.visualization.draw_geometries(visual_elements, 
+    #                                   window_name="Proximity-Based Orthogonal Wall Detection",
+    #                                   width=1024, height=768)
 
-    o3d.visualization.draw_geometries(visual_elements, 
-                                      window_name="Proximity-Based Orthogonal Wall Detection",
-                                      width=1024, height=768)
-
-if __name__ == "__main__":
-    find_walls_highlight_random_colors("cloud_outside2.ply")
+# if __name__ == "__main__":
+#     find_walls("cloud_outside2.ply")

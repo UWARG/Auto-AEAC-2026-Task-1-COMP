@@ -20,7 +20,7 @@ def add_object_tracker(p: dai.Pipeline, cameras: "CameraBundle" = None):
     objectTracker = p.create(dai.node.ObjectTracker)
 
     spatialDetectionNetwork.setConfidenceThreshold(0.6)
-    spatialDetectionNetwork.input.setQueueSize(1)
+    #spatialDetectionNetwork.input.setQueueSize(1)
     spatialDetectionNetwork.input.setBlocking(False)
     spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
     spatialDetectionNetwork.setDepthLowerThreshold(100)

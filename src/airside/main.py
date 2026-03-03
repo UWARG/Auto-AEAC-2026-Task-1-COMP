@@ -76,7 +76,8 @@ def main() -> None:
     oakd.join()
     # arducam.join()
 
-    post_processing.run(str(output_folder / "building.ply"), str(output_folder / "targets.txt"), mav_comm, initial_heading)
+    if USE_MAVLINK:
+        post_processing.run(str(output_folder / "building.ply"), str(output_folder / "targets.txt"), mav_comm, initial_heading)
 
 if __name__ == "__main__":
     main_logger = logging.getLogger("main")

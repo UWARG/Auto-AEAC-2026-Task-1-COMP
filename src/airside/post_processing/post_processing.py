@@ -3,16 +3,15 @@ from typing import Tuple
 from airside.mavlink_comm import MavlinkComm
 import numpy as np
 from util import Plane, Vector3d, Target, MappedTarget, Direction, Coordinate, Colours
-from airside.post_processing import target_rel_position
-
+from airside.post_processing import target_rel_position, wall_detection, cluster_estimation
 
 def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
     def _generate_ply(db_path: str) -> str:
         return "pointcloud.ply"
 
     def _fit_planes(ply_path: str) -> list[Plane]:
-        return []
-
+        return wall_detection.find_walls(ply_path, mav_comm)
+        
     def _get_targets(targets_path: str) -> Tuple[list[Target], Direction]:
         return [], Direction.NORTH
 

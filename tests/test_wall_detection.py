@@ -1,12 +1,12 @@
 import pytest
 from airside.post_processing.wall_detection import find_walls
+from airside.mavlink_comm import MavlinkComm
 
 
 def test_wall_detection():
-
     file = "stereo_vision_data.ply"
 
-    result = find_walls(file)
+    result = find_walls(file, mav_comm=MavlinkComm())
 
     expected_walls = 2
     result_walls = len(result)

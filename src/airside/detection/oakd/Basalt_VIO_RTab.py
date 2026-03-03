@@ -1,10 +1,16 @@
 import depthai as dai
+from pathlib import Path
+from typing import Optional
 from camera_bundle import CameraBundle
 
 
 # Create pipeline
-def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None):
+def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None):
     with p:
+        # Fetch output folder path and create it if it doesn't exist
+        output_folder = Path(__file__).parent.parent.parent.parent.parent / "outputs"
+        output_folder.mkdir(exist_ok=True)
+
         # Ensure we have a CameraBundle (created only if not provided)
         cameras = cameras or CameraBundle(p)
         fps = 60
@@ -16,8 +22,9 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: "CameraBundle" = None):
         right = cameras.monoRight
         imu = p.create(dai.node.IMU)
         odom = p.create(dai.node.BasaltVIO)
-        slam = cameras.slam
         stereo = cameras.stereo
+        slam = cameras.slam
+        slam.setDatabasePath(str(output_folder / "building.ply"))
         params = {
             "RGBD/CreateOccupancyGrid": "true",
             "Grid/3D": "true",

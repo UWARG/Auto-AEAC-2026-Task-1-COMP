@@ -317,6 +317,9 @@ expected_clusters = [
     [43.43300, -80.57800, 120.0],
 ]
 
-result_clusters = cluster_estimation(extracted_points)
 
-assert len(expected_clusters) == pytest.approx(len(result_clusters))
+def test_cluster_estimation():
+
+    result_clusters = cluster_estimation(extracted_points)
+
+    assert len(expected_clusters) == pytest.approx(len(result_clusters))

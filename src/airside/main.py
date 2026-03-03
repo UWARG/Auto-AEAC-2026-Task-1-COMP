@@ -17,7 +17,7 @@ from mavlink_comm import MavlinkComm
 # If set to true, then post-processing is triggered by pressing enter in the console.
 TRIGGER_DEBUG_MODE = True
 
-USE_MAVLINK = False
+USE_MAVLINK = True
 
 def main() -> None:
     """Main control loop for airside arch."""

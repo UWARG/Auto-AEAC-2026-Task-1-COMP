@@ -2,7 +2,7 @@ import open3d as o3d
 import numpy as np
 import random
 from airside.mavlink_comm import MavlinkComm
-
+from util import Plane, Vector3d
 
 def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
     """
@@ -201,12 +201,18 @@ def find_walls(filename: str, mav_comm: MavlinkComm):
         # Diagnostic Output
         model = wall_group["models"][0]
         normal = np.array(model[:3])
-        normal = normal / np.linalg.norm(normal)
+        magnitude = np.linalg.norm(normal)
+        normal = normal / magnitude
         total_points = len(combined_cloud.points)
+        distance = model[3]
 
+        offset = -(distance/magnitude)
         mav_comm.info(
-            f"Wall {i+1} | Points: {total_points} |Normal (X, Y, Z): [{normal[0]:.3f}, {normal[1]:.3f}, {normal[2]:.3f}]"
+            f"Wall {i+1} | Points: {total_points} |Normal (X, Y, Z): [{normal[0]:.3f}, {normal[1]:.3f}, {normal[2]:.3f}] | Distance: {distance:.3f}"
         )
-        walls.append([normal[0], normal[1], normal[2]])
+
+        normal_vec = Vector3d(x=normal[0], y=normal[1], z=normal[2])
+        plane = Plane(normal=normal_vec, offset=offset)
+        walls.append(plane)
 
     return walls

@@ -1,8 +1,11 @@
 import pytest
 from airside.post_processing.wall_detection import find_walls
+import os 
 
 def test_wall_detection():
-    file = "stereo_vision_data.ply"
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+
+    file = os.path.join(current_dir, "stereo_vision_data.ply")
 
     result = find_walls(file)
 

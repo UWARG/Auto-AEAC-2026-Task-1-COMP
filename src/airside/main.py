@@ -9,9 +9,13 @@ import threading
 from airside.detection.oakd.oakd import OakD
 from airside.detection.arducam import Arducam
 from airside.post_processing import post_processing
-from util import Coordinate, MappedTarget, Vector3d
+from util import Coordinate, Direction, MappedTarget, Vector3d
 from mavlink_comm import MavlinkComm
 
+
+# If set to false, then the system uses the RC switch to trigger post-processing.
+# If set to true, then post-processing is triggered by pressing enter in the console.
+TRIGGER_DEBUG_MODE = True
 
 def main() -> None:
     """Main control loop for airside arch."""
@@ -38,18 +42,34 @@ def main() -> None:
     oakd = OakD(main_logger, detections_logger, stop_event)
     # arducam = Arducam(main_logger, detections_logger, stop_event)
 
+    heading_mapping = {
+        Direction.NORTH: 0.0,
+        Direction.EAST: 90.0,
+        Direction.SOUTH: 180.0,
+        Direction.WEST: 270.0,
+    }
+    initial_heading_deg = mav_comm.get_heading()
+    initial_heading = Direction.NORTH
+    for dir, deg in heading_mapping.items():
+        if abs(initial_heading_deg - deg) <= 45:
+            initial_heading = dir
+            break
+
     oakd.start()
     # arducam.start()
 
-    while mav_comm.post_processing_requested() is False:
-        mav_comm.process_data_stream()
+    if TRIGGER_DEBUG_MODE:
+        main_logger.info("Trigger debug mode enabled. Press Enter to trigger post-processing.")
+        input()
+    else:
+        while mav_comm.post_processing_requested() is False:
+            mav_comm.process_data_stream()
 
     stop_event.set()
     oakd.join()
     # arducam.join()
 
-    post_processing.run(str(output_folder / "building.ply"), str(output_folder / "targets.txt"), mav_comm)
-
+    post_processing.run(str(output_folder / "building.ply"), str(output_folder / "targets.txt"), mav_comm, initial_heading)
 
 if __name__ == "__main__":
     main_logger = logging.getLogger("main")

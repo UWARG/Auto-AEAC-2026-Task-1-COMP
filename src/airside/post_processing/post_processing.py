@@ -6,7 +6,7 @@ from util import Plane, Vector3d, Target, MappedTarget, Direction, Coordinate, C
 from airside.post_processing import target_rel_position
 
 
-def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
+def run(db_path: str, targets_path: str, mav_comm: MavlinkComm, first_direction: Direction) -> None:
     def _fit_planes(ply_path: str) -> list[Plane]:
         return []
 

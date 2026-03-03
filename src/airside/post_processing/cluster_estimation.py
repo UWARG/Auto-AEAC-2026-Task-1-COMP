@@ -35,7 +35,6 @@ class ClusterEstimation:
         max_num_components,
         random_state,
         min_points_per_cluster,
-        mean,
     ):
 
         if min_activation_threshold > max_num_components or max_num_components < 1:

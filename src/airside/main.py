@@ -17,6 +17,8 @@ from mavlink_comm import MavlinkComm
 # If set to true, then post-processing is triggered by pressing enter in the console.
 TRIGGER_DEBUG_MODE = True
 
+USE_MAVLINK = False
+
 def main() -> None:
     """Main control loop for airside arch."""
     main_logger.info("Starting airside...")
@@ -24,7 +26,8 @@ def main() -> None:
     output_folder = Path(__file__).parent.parent.parent / "outputs"
     output_folder.mkdir(exist_ok=True)
 
-    mav_comm = MavlinkComm(main_logger)
+    if USE_MAVLINK:
+        mav_comm = MavlinkComm(main_logger)
 
     detections_logger = logging.getLogger("detections")
     detections_logger.setLevel(logging.INFO)
@@ -48,7 +51,11 @@ def main() -> None:
         Direction.SOUTH: 180.0,
         Direction.WEST: 270.0,
     }
-    initial_heading_deg = mav_comm.get_heading()
+    if USE_MAVLINK:
+        initial_heading_deg = mav_comm.get_heading()
+    else:
+        initial_heading = 0
+
     initial_heading = Direction.NORTH
     for dir, deg in heading_mapping.items():
         if abs(initial_heading_deg - deg) <= 45:
@@ -61,7 +68,7 @@ def main() -> None:
     if TRIGGER_DEBUG_MODE:
         main_logger.info("Trigger debug mode enabled. Press Enter to trigger post-processing.")
         input()
-    else:
+    elif USE_MAVLINK:
         while mav_comm.post_processing_requested() is False:
             mav_comm.process_data_stream()
 

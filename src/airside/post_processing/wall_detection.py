@@ -3,6 +3,7 @@ import numpy as np
 import random
 from util import Plane, Vector3d
 
+
 def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
     """
     Checks if two plane equations represent the same physical plane
@@ -205,7 +206,7 @@ def find_walls(filename: str):
         total_points = len(combined_cloud.points)
         distance = model[3]
 
-        offset = -(distance/magnitude)
+        offset = -(distance / magnitude)
         # mav_comm.info(
         #     f"Wall {i+1} | Points: {total_points} |Normal (X, Y, Z): [{normal[0]:.3f}, {normal[1]:.3f}, {normal[2]:.3f}] | Distance: {distance:.3f}"
         # )

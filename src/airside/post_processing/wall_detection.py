@@ -1,7 +1,6 @@
 import open3d as o3d
 import numpy as np
 import random
-from airside.mavlink_comm import MavlinkComm
 from util import Plane, Vector3d
 
 def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
@@ -42,15 +41,15 @@ def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
     return True
 
 
-def find_walls(filename: str, mav_comm: MavlinkComm):
+def find_walls(filename: str):
 
-    mav_comm.info(f"Loading {filename}...")
+    # mav_comm.info(f"Loading {filename}...")
     pcd = o3d.io.read_point_cloud(filename)
 
     # Downsample for speed
     pcd = pcd.voxel_down_sample(voxel_size=0.05)
 
-    mav_comm.info("Filtering noise...")
+    # mav_comm.info("Filtering noise...")
     pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=1.0)
 
     remaining_cloud = pcd
@@ -61,7 +60,7 @@ def find_walls(filename: str, mav_comm: MavlinkComm):
     max_horizontal = 1
     horizontal_count = 0
 
-    mav_comm.info("Running Iterative RANSAC...")
+    # mav_comm.info("Running Iterative RANSAC...")
 
     while True:
         plane_model, inliers = remaining_cloud.segment_plane(
@@ -88,8 +87,8 @@ def find_walls(filename: str, mav_comm: MavlinkComm):
         if len(remaining_cloud.points) < min_pts:
             break
 
-    mav_comm.info(f"Found {len(extracted_planes)} planes.")
-    mav_comm.info("Merging coplanar patches...")
+    # mav_comm.info(f"Found {len(extracted_planes)} planes.")
+    # mav_comm.info("Merging coplanar patches...")
 
     merged_walls = []
 
@@ -119,7 +118,7 @@ def find_walls(filename: str, mav_comm: MavlinkComm):
                 {"models": [patch["model"]], "clouds": [patch["cloud"]]}
             )
 
-    mav_comm.info(f"Merged into {len(merged_walls)} distinct physical walls.")
+    # mav_comm.info(f"Merged into {len(merged_walls)} distinct physical walls.")
 
     # Sort walls by size so the largest walls
     merged_walls.sort(
@@ -127,7 +126,7 @@ def find_walls(filename: str, mav_comm: MavlinkComm):
         reverse=True,
     )
 
-    mav_comm.info("Detecting corners ...")
+    # mav_comm.info("Detecting corners ...")
 
     adjusted_indices = set()
     corner_proximity_threshold = 3.0  # Maximum distance in units/meters between two walls to be considered a corner
@@ -207,9 +206,9 @@ def find_walls(filename: str, mav_comm: MavlinkComm):
         distance = model[3]
 
         offset = -(distance/magnitude)
-        mav_comm.info(
-            f"Wall {i+1} | Points: {total_points} |Normal (X, Y, Z): [{normal[0]:.3f}, {normal[1]:.3f}, {normal[2]:.3f}] | Distance: {distance:.3f}"
-        )
+        # mav_comm.info(
+        #     f"Wall {i+1} | Points: {total_points} |Normal (X, Y, Z): [{normal[0]:.3f}, {normal[1]:.3f}, {normal[2]:.3f}] | Distance: {distance:.3f}"
+        # )
 
         normal_vec = Vector3d(x=normal[0], y=normal[1], z=normal[2])
         plane = Plane(normal=normal_vec, offset=offset)

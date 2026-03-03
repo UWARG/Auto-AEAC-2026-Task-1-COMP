@@ -15,7 +15,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
         return "pointcloud.ply"
 
     def _fit_planes(ply_path: str) -> list[Plane]:
-        return wall_detection.find_walls(ply_path, mav_comm)
+        return wall_detection.find_walls(ply_path)
 
     def _get_targets(targets_path: str) -> Tuple[list[Target], Direction]:
         return [], Direction.NORTH

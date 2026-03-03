@@ -6,7 +6,7 @@ from airside.detection.oakd.camera_bundle import CameraBundle
 
 from ..abstract_camera import AbstractCamera
 from util import Colours, MappedTarget, Direction, Coordinate, Colour, Quaternion, Target
-import airside.detection.oakd.Basalt_VIO_RTab
+from airside.detection.oakd.Basalt_VIO_RTab import add_basalt_vio_rtab
 from airside.detection.oakd.object_tracker import add_object_tracker
 import depthai as dai
 from airside.detection.oakd.rerun_node import RerunNode
@@ -29,7 +29,7 @@ class OakD(AbstractCamera):
         with dai.Pipeline() as pipeline:
             cameraBundle = CameraBundle(pipeline)
             qTracklets, qFrame = add_object_tracker(pipeline, cameraBundle)
-            Basalt_VIO_RTab.add_basalt_vio_rtab(pipeline, cameraBundle)
+            add_basalt_vio_rtab(pipeline, cameraBundle)
 
             slam = cameraBundle.slam
             if ENABLE_RERUN:

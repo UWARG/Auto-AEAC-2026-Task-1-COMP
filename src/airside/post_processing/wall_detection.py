@@ -3,6 +3,7 @@ import numpy as np
 import random
 from airside.mavlink_comm import MavlinkComm
 
+
 def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
     """
     Checks if two plane equations represent the same physical plane

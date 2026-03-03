@@ -1,6 +1,7 @@
 import pytest
 from airside.post_processing.wall_detection import find_walls
-import os 
+import os
+
 
 def test_wall_detection():
     current_dir = os.path.dirname(os.path.abspath(__file__))

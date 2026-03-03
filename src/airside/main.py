@@ -27,6 +27,7 @@ def main() -> None:
     output_folder.mkdir(exist_ok=True)
 
     if USE_MAVLINK:
+        main_logger.info("Initializing Mavlink Connection")
         mav_comm = MavlinkComm(main_logger)
 
     detections_logger = logging.getLogger("detections")
@@ -35,6 +36,7 @@ def main() -> None:
 
     detections_formatter = logging.Formatter("%(message)s")
 
+    main_logger.info("Creating output directories and files")
     os.makedirs("outputs", exist_ok=True)
     detections_handler_file = logging.FileHandler(str(output_folder / "targets.txt"))
     detections_handler_file.setFormatter(detections_formatter)
@@ -52,6 +54,7 @@ def main() -> None:
         Direction.WEST: 270.0,
     }
     if USE_MAVLINK:
+        main_logger.info("Getting Heading through Mavlink")
         initial_heading_deg = mav_comm.get_heading()
     else:
         initial_heading_deg = 0

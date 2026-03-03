@@ -6,7 +6,7 @@ from airside.mavlink_comm import MavlinkComm
 def test_wall_detection():
     file = "stereo_vision_data.ply"
 
-    result = find_walls(file, mav_comm=MavlinkComm())
+    result = find_walls(file, MavlinkComm(main_logger=None))
 
     expected_walls = 2
     result_walls = len(result)

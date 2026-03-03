@@ -20,28 +20,22 @@ jobs:
         with:
           submodules: recursive
 
-      # Set Python version
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.11
+          python-version-file: "pyproject.toml"
 
-      # Upgrade pip
-      - name: Upgrade pip
-        run: |
-          python -m pip install --upgrade pip
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-      # Set up submodules
-      - name: Set up all submodules and project dependencies
-        run: |
-          git submodule foreach --recursive "pip install -r requirements.txt"
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
 
-      # Install project dependencies
-      - name: Install project dependencies
-        run: |
-          pip install -r requirements.txt
+      - name: Run Tests
+        run: uv run pytest tests
 
-      # Run linters and formatters
+      # Running python tests
       - name: Linters and formatters
-        run: |
-          black --check .
+        run: uv run black --check .

@@ -13,18 +13,11 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None)
 
         # Ensure we have a CameraBundle (created only if not provided)
         cameras = cameras or CameraBundle(p)
-        fps = 60
-        width = 640
-        height = 400
-        # Define sources and outputs
-
-        left = cameras.monoLeft
-        right = cameras.monoRight
         imu = p.create(dai.node.IMU)
         odom = p.create(dai.node.BasaltVIO)
         stereo = cameras.stereo
         slam = cameras.slam
-        slam.setDatabasePath(str(output_folder / "building.ply"))
+        slam.setDatabasePath(str(output_folder / "building.db"))
         params = {
             "RGBD/CreateOccupancyGrid": "true",
             "Grid/3D": "true",

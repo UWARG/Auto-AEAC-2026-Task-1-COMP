@@ -1,7 +1,7 @@
 import depthai as dai
 from pathlib import Path
 from typing import Optional
-from camera_bundle import CameraBundle
+from airside.detection.oakd.camera_bundle import CameraBundle
 
 
 # Create pipeline

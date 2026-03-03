@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import depthai as dai
-from camera_bundle import CameraBundle
+from airside.detection.oakd.camera_bundle import CameraBundle
 
 fullFrameTracking = False
 

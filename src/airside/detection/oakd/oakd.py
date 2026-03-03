@@ -6,12 +6,12 @@ from airside.detection.oakd.camera_bundle import CameraBundle
 
 from ..abstract_camera import AbstractCamera
 from util import Colours, MappedTarget, Direction, Coordinate, Colour, Quaternion, Target
-import Basalt_VIO_RTab
-import object_tracker
+import airside.detection.oakd.Basalt_VIO_RTab
+import airside.detection.oakd.object_tracker
 import depthai as dai
-from rerun_node import RerunNode
+from airside.detection.oakd.rerun_node import RerunNode
 import time
-from camera_bundle import CameraBundle
+from airside.detection.oakd.camera_bundle import CameraBundle
 
 
 ENABLE_RERUN = False

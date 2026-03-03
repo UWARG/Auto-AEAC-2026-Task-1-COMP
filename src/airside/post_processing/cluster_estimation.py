@@ -46,7 +46,6 @@ class ClusterEstimation:
             max_num_components,
             random_state,
             min_points_per_cluster,
-            mean,
         )
 
     def __init__(
@@ -56,14 +55,13 @@ class ClusterEstimation:
         max_num_components,
         random_state,
         min_points_per_cluster,
-        mean,
     ):
         self._vgmm = sklearn.mixture.BayesianGaussianMixture(
             covariance_type="spherical",
             n_components=max_num_components,
             init_params="k-means++",
             weight_concentration_prior=0.001,  # Lower --> Accepts clusters with fewer points
-            mean_precision_prior=mean,
+            mean_precision_prior=1e-3,
             max_iter=3000,
             random_state=random_state,
         )

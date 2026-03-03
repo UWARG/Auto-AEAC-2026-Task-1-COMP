@@ -54,7 +54,7 @@ def main() -> None:
     if USE_MAVLINK:
         initial_heading_deg = mav_comm.get_heading()
     else:
-        initial_heading = 0
+        initial_heading_deg = 0
 
     initial_heading = Direction.NORTH
     for dir, deg in heading_mapping.items():

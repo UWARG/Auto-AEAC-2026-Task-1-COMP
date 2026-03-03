@@ -41,6 +41,7 @@ class OakD(AbstractCamera):
                 slam.groundPCL.link(rerunViewer.inputGroundPCL)
 
             pipeline.start()
+            self.main_logger.info("Starting Pipeline...")
             try:
                 while not self.stop_event.is_set():
                     # Get tracker outputs

@@ -49,7 +49,6 @@ class OakD(AbstractCamera):
                     frameMsg = qFrame.tryGet()
                     # print tracked targets only when being tracked    
                     if trackMsg:
-                        self.main_logger.info(f"Track Message has item: {trackMsg}")
                         for t in trackMsg.tracklets: # type: ignore
                             # Log only when actively tracked to minimize spam
                             if t.status.name in ("TRACKED", "NEW"):

@@ -19,7 +19,6 @@ from airside.detection.oakd.object_tracker import add_object_tracker
 import depthai as dai
 from airside.detection.oakd.rerun_node import RerunNode
 import time
-from airside.detection.oakd.camera_bundle import CameraBundle
 
 
 ENABLE_RERUN = False
@@ -42,6 +41,7 @@ class OakD(AbstractCamera):
             add_basalt_vio_rtab(pipeline, cameraBundle)
 
             slam = cameraBundle.slam
+            qSlamTransform = slam.transform.createOutputQueue(maxSize=16, blocking=False)
             if ENABLE_RERUN:
                 rerunViewer = RerunNode()
                 slam.transform.link(rerunViewer.inputTrans)
@@ -52,8 +52,13 @@ class OakD(AbstractCamera):
 
             pipeline.start()
             self.main_logger.info("Starting Pipeline...")
+            latest_transform: dai.TransformData | None = None
             try:
                 while not self.stop_event.is_set():
+                    transform_msg = qSlamTransform.tryGet()
+                    if transform_msg is not None:
+                        latest_transform = transform_msg  # type: ignore
+
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
                     if detectionMsg:
@@ -66,21 +71,36 @@ class OakD(AbstractCamera):
                                 )
                                 continue
                             if sc:
-                                transform = cameraBundle.slam.getLocalTransform()
-                                quat = transform.getQuaternion()
-                                trans = transform.getTranslation()
+                                if latest_transform is None:
+                                    self.main_logger.debug(
+                                        "Skipping detection: waiting for SLAM"
+                                    )
+                                    continue
 
-                                print(f"======= SLAM TRANSLATION: ({trans.x}, {trans.y}, {trans.z}) =======")
-                                print(f"======= SLAM QUATERNION: ({quat.qw}, {quat.qx}, {quat.qy}, {quat.qz}) =======")
+                                quat = latest_transform.getQuaternion()
+                                trans = latest_transform.getTranslation()
+
+                                if quat.qw < 0:
+                                    qw, qx, qy, qz = (
+                                        -quat.qw,
+                                        -quat.qx,
+                                        -quat.qy,
+                                        -quat.qz,
+                                    )
+                                else:
+                                    qw, qx, qy, qz = (
+                                        quat.qw,
+                                        quat.qx,
+                                        quat.qy,
+                                        quat.qz,
+                                    )
 
                                 translated_coordinate = (
                                     FRD_conversion.convert_target_to_FRD(
                                         cam_target_coord=Coordinate(
                                             sc.x / 1000.0, sc.y / 1000.0, sc.z / 1000.0
                                         ),
-                                        origin_cam_q=Quaternion(
-                                            quat.qw, quat.qx, quat.qy, quat.qz
-                                        ),
+                                        origin_cam_q=Quaternion(qw, qx, qy, qz),
                                         origin_cam_coord=Coordinate(
                                             trans.x, trans.y, trans.z
                                         ),
@@ -93,6 +113,18 @@ class OakD(AbstractCamera):
                                 )
 
                                 self.detections_logger.info(mapped_target)
+
+                                # TODO: Remove print and replace with logging once done with frd conversion stuff
+                                print(
+                                    "SLAM pose t=(%.3f, %.3f, %.3f) q=(%.4f, %.4f, %.4f, %.4f)",
+                                    trans.x,
+                                    trans.y,
+                                    trans.z,
+                                    qw,
+                                    qx,
+                                    qy,
+                                    qz,
+                                )
                                 # self.main_logger.info(
                                 #     f"Detected target: {mapped_target}"
                                 # )

@@ -89,7 +89,7 @@ def main(starting_time: str) -> None:
 
     if USE_MAVLINK:
         post_processing.run(
-            str(output_folder / "building.ply"),
+            str(output_folder / "building.db"),
             str(output_folder / f"targets_{starting_time}.txt"),
             mav_comm,
             initial_heading,

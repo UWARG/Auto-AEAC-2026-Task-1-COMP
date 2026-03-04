@@ -70,6 +70,9 @@ class OakD(AbstractCamera):
                                 quat = transform.getQuaternion()
                                 trans = transform.getTranslation()
 
+                                print(f"======= SLAM TRANSLATION: ({trans.x}, {trans.y}, {trans.z}) =======")
+                                print(f"======= SLAM QUATERNION: ({quat.qw}, {quat.qx}, {quat.qy}, {quat.qz}) =======")
+
                                 translated_coordinate = (
                                     FRD_conversion.convert_target_to_FRD(
                                         cam_target_coord=Coordinate(
@@ -90,9 +93,9 @@ class OakD(AbstractCamera):
                                 )
 
                                 self.detections_logger.info(mapped_target)
-                                self.main_logger.info(
-                                    f"Detected target: {mapped_target}"
-                                )
+                                # self.main_logger.info(
+                                #     f"Detected target: {mapped_target}"
+                                # )
                     time.sleep(0.01)
             finally:
                 slam.saveDatabase()

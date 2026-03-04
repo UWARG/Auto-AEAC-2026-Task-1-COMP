@@ -5,7 +5,15 @@ from airside.detection import FRD_conversion
 from airside.detection.oakd.camera_bundle import CameraBundle
 
 from ..abstract_camera import AbstractCamera
-from util import Colours, MappedTarget, Direction, Coordinate, Colour, Quaternion, Target
+from util import (
+    Colours,
+    MappedTarget,
+    Direction,
+    Coordinate,
+    Colour,
+    Quaternion,
+    Target,
+)
 from airside.detection.oakd.Basalt_VIO_RTab import add_basalt_vio_rtab
 from airside.detection.oakd.object_tracker import add_object_tracker
 import depthai as dai
@@ -15,6 +23,7 @@ from airside.detection.oakd.camera_bundle import CameraBundle
 
 
 ENABLE_RERUN = False
+
 
 class OakD(AbstractCamera):
     def __init__(
@@ -28,7 +37,8 @@ class OakD(AbstractCamera):
     def run(self):
         with dai.Pipeline() as pipeline:
             cameraBundle = CameraBundle(pipeline)
-            qTracklets, qFrame = add_object_tracker(pipeline, cameraBundle)
+            # qDetections, qFrame = add_object_tracker(pipeline, cameraBundle)
+            qDetections = add_object_tracker(pipeline, cameraBundle)
             add_basalt_vio_rtab(pipeline, cameraBundle)
 
             slam = cameraBundle.slam
@@ -45,32 +55,44 @@ class OakD(AbstractCamera):
             try:
                 while not self.stop_event.is_set():
                     # Get tracker outputs
-                    trackMsg = qTracklets.tryGet()
-                    frameMsg = qFrame.tryGet()
-                    # print tracked targets only when being tracked    
-                    if trackMsg:
-                        for t in trackMsg.tracklets: # type: ignore
-                            # Log only when actively tracked to minimize spam
-                            if t.status.name in ("TRACKED", "NEW"):
-                                sc = getattr(t, "spatialCoordinates", None)
-                                if sc:
-                                    transform = cameraBundle.slam.getLocalTransform()
-                                    quat = transform.getQuaternion()
-                                    trans = transform.getTranslation()
-                                    
-                                    translated_coordinate = FRD_conversion.convert_target_to_FRD(
-                                        cam_target_coord=Coordinate(sc.x / 1000.0, sc.y / 1000.0, sc.z / 1000.0),
-                                        origin_cam_q=Quaternion(quat.qw, quat.qx, quat.qy, quat.qz),
-                                        origin_cam_coord=Coordinate(trans.x, trans.y, trans.z),
-                                    )
+                    detectionMsg = qDetections.tryGet()
+                    if detectionMsg:
+                        for detection in detectionMsg.detections:  # type: ignore
+                            detection: dai.SpatialImgDetection = detection
+                            sc = getattr(detection, "spatialCoordinates", None)
+                            if sc is None:
+                                self.main_logger.error(
+                                    "Detection missing spatial coordinates"
+                                )
+                                continue
+                            if sc:
+                                transform = cameraBundle.slam.getLocalTransform()
+                                quat = transform.getQuaternion()
+                                trans = transform.getTranslation()
 
-                                    mapped_target = Target(
-                                        colour=Colours.RED,  # TODO: Replace with actual colour
-                                        location=translated_coordinate
+                                translated_coordinate = (
+                                    FRD_conversion.convert_target_to_FRD(
+                                        cam_target_coord=Coordinate(
+                                            sc.x / 1000.0, sc.y / 1000.0, sc.z / 1000.0
+                                        ),
+                                        origin_cam_q=Quaternion(
+                                            quat.qw, quat.qx, quat.qy, quat.qz
+                                        ),
+                                        origin_cam_coord=Coordinate(
+                                            trans.x, trans.y, trans.z
+                                        ),
                                     )
+                                )
 
-                                    self.detections_logger.info(mapped_target)
-                                    self.main_logger.info(f"Detected target: {mapped_target}")
+                                mapped_target = Target(
+                                    colour=Colours.RED,  # TODO: Replace with actual colour
+                                    location=translated_coordinate,
+                                )
+
+                                self.detections_logger.info(mapped_target)
+                                self.main_logger.info(
+                                    f"Detected target: {mapped_target}"
+                                )
                     time.sleep(0.01)
             finally:
                 slam.saveDatabase()

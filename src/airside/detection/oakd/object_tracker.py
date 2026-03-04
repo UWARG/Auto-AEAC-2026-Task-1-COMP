@@ -4,6 +4,7 @@ from typing import Optional
 import depthai as dai
 from airside.detection.oakd.camera_bundle import CameraBundle
 
+
 def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None):
     cameras = cameras or CameraBundle(p)
     depthNode = cameras.stereo
@@ -20,6 +21,9 @@ def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None
     spatialDetectionNetwork.setDepthLowerThreshold(100)
     spatialDetectionNetwork.setDepthUpperThreshold(5000)
 
-    qDetections = spatialDetectionNetwork.out.createOutputQueue(maxSize=16, blocking=False)
-    qFrame = spatialDetectionNetwork.passthrough.createOutputQueue(maxSize=16, blocking=False)
-    return qDetections, qFrame
+    qDetections = spatialDetectionNetwork.out.createOutputQueue(
+        maxSize=16, blocking=False
+    )
+    # qFrame = spatialDetectionNetwork.passthrough.createOutputQueue(maxSize=16, blocking=False)
+    # return qDetections, qFrame
+    return qDetections

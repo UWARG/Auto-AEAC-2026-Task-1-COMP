@@ -10,7 +10,7 @@ from airside.detection.oakd.oakd import OakD
 from airside.detection.arducam import Arducam
 from airside.post_processing import post_processing
 from util import Coordinate, Direction, MappedTarget, Vector3d
-from mavlink_comm import MavlinkComm
+from airside.mavlink_comm import MavlinkComm
 
 
 # If set to false, then the system uses the RC switch to trigger post-processing.
@@ -18,6 +18,7 @@ from mavlink_comm import MavlinkComm
 TRIGGER_DEBUG_MODE = True
 
 USE_MAVLINK = True
+
 
 def main() -> None:
     """Main control loop for airside arch."""
@@ -69,7 +70,9 @@ def main() -> None:
     # arducam.start()
 
     if TRIGGER_DEBUG_MODE:
-        main_logger.info("Trigger debug mode enabled. Press Enter to trigger post-processing.")
+        main_logger.info(
+            "Trigger debug mode enabled. Press Enter to trigger post-processing."
+        )
         input()
     elif USE_MAVLINK:
         while mav_comm.post_processing_requested() is False:
@@ -80,7 +83,13 @@ def main() -> None:
     # arducam.join()
 
     if USE_MAVLINK:
-        post_processing.run(str(output_folder / "building.ply"), str(output_folder / "targets.txt"), mav_comm, initial_heading)
+        post_processing.run(
+            str(output_folder / "building.ply"),
+            str(output_folder / "targets.txt"),
+            mav_comm,
+            initial_heading,
+        )
+
 
 if __name__ == "__main__":
     main_logger = logging.getLogger("main")

@@ -102,7 +102,7 @@ class OakD(AbstractCamera):
                                         ),
                                         origin_cam_q=Quaternion(qw, qx, qy, qz),
                                         origin_cam_coord=Coordinate(
-                                            trans.x, trans.y, trans.z
+                                            trans.x / 1000.0, trans.y / 1000.0, trans.z / 1000.0
                                         ),
                                     )
                                 )

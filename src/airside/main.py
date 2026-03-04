@@ -20,7 +20,7 @@ TRIGGER_DEBUG_MODE = True
 USE_MAVLINK = True
 
 
-def main() -> None:
+def main(starting_time: str) -> None:
     """Main control loop for airside arch."""
     main_logger.info("Starting airside...")
 
@@ -38,8 +38,7 @@ def main() -> None:
     detections_formatter = logging.Formatter("%(message)s")
 
     main_logger.info("Creating output directories and files")
-    os.makedirs("outputs", exist_ok=True)
-    detections_handler_file = logging.FileHandler(str(output_folder / "targets.txt"))
+    detections_handler_file = logging.FileHandler(str(output_folder / f"targets_{starting_time}.txt"))
     detections_handler_file.setFormatter(detections_formatter)
     detections_logger.addHandler(detections_handler_file)
 
@@ -82,16 +81,24 @@ def main() -> None:
     oakd.join()
     # arducam.join()
 
+    # Flush all handlers to ensure data is written to disk
+    for handler in detections_logger.handlers:
+        handler.flush()
+    for handler in main_logger.handlers:
+        handler.flush()
+
     if USE_MAVLINK:
         post_processing.run(
             str(output_folder / "building.ply"),
-            str(output_folder / "targets.txt"),
+            str(output_folder / f"targets_{starting_time}.txt"),
             mav_comm,
             initial_heading,
         )
 
 
 if __name__ == "__main__":
+    starting_time = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime())
+    
     main_logger = logging.getLogger("main")
     main_logger.setLevel(logging.INFO)
     main_logger.propagate = False
@@ -102,15 +109,16 @@ if __name__ == "__main__":
     main_handler_console.setFormatter(main_formatter)
     main_logger.addHandler(main_handler_console)
 
-    os.makedirs("logs", exist_ok=True)
+    logs_folder = Path("logs")
+    logs_folder.mkdir(exist_ok=True, parents=True)
     main_logger_handler_file = logging.FileHandler(
-        f"logs/airside_{time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime())}.log"
+        str(logs_folder / f"airside_{starting_time}.log")
     )
     main_logger_handler_file.setFormatter(main_formatter)
     main_logger.addHandler(main_logger_handler_file)
 
     try:
-        main()
+        main(starting_time)
     except KeyboardInterrupt:
         main_logger.info("Keyboard interrupt received, exiting gracefully...")
     except Exception as e:

@@ -44,12 +44,13 @@ def main() -> None:
     target_info_logger = logging.getLogger("Target_Info")
 
     # make directory
-    Path("logs").mkdir(exist_ok=True, parents=True)
+    logs_folder = Path("logs")
+    logs_folder.mkdir(exist_ok=True, parents=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    main_handler_path = Path("logs", f"main_{timestamp}.log")
-    main_handler = logging.FileHandler(main_handler_path, mode="w")
-    target_info_handler_path = Path("logs", f"Task_1_WARG_targets_{timestamp}.txt")
-    target_info_handler = logging.FileHandler(target_info_handler_path, mode="w")
+    main_handler_path = logs_folder / f"main_{timestamp}.log"
+    main_handler = logging.FileHandler(str(main_handler_path), mode="w")
+    target_info_handler_path = logs_folder / f"Task_1_WARG_targets_{timestamp}.txt"
+    target_info_handler = logging.FileHandler(str(target_info_handler_path), mode="w")
     formatter = logging.Formatter(
         fmt="%(asctime)s: [%(levelname)s] %(message)s", datefmt="%H:%M:%S"
     )
@@ -92,6 +93,11 @@ def main() -> None:
             main_logger.info(
                 f"Terminating Program, number of corrupted" f" messages:{num_corrupted}"
             )
+            # Flush all handlers to ensure data is written to disk
+            for handler in main_logger.handlers:
+                handler.flush()
+            for handler in target_info_logger.handlers:
+                handler.flush()
             break
         except Exception as e:
             main_logger.error(f"A problem occured {e}")

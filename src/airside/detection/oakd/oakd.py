@@ -1,9 +1,9 @@
 import threading
 import logging
-
+ 
 from airside.detection import FRD_conversion
 from airside.detection.oakd.camera_bundle import CameraBundle
-
+ 
 from ..abstract_camera import AbstractCamera
 from util import (
     Colours,
@@ -19,11 +19,11 @@ from airside.detection.oakd.object_tracker import add_object_tracker
 import depthai as dai
 from airside.detection.oakd.rerun_node import RerunNode
 import time
-
-
+ 
+ 
 ENABLE_RERUN = False
-
-
+ 
+ 
 class OakD(AbstractCamera):
     def __init__(
         self,
@@ -32,14 +32,14 @@ class OakD(AbstractCamera):
         stop_event: threading.Event,
     ):
         super().__init__(main_logger, detections_logger, stop_event)
-
+ 
     def run(self):
         with dai.Pipeline() as pipeline:
             cameraBundle = CameraBundle(pipeline)
             # qDetections, qFrame = add_object_tracker(pipeline, cameraBundle)
             qDetections = add_object_tracker(pipeline, cameraBundle)
             add_basalt_vio_rtab(pipeline, cameraBundle)
-
+ 
             slam = cameraBundle.slam
             qSlamTransform = slam.transform.createOutputQueue(maxSize=16, blocking=False)
             if ENABLE_RERUN:
@@ -49,7 +49,7 @@ class OakD(AbstractCamera):
                 slam.occupancyGridMap.link(rerunViewer.inputGrid)
                 slam.obstaclePCL.link(rerunViewer.inputObstaclePCL)
                 slam.groundPCL.link(rerunViewer.inputGroundPCL)
-
+ 
             pipeline.start()
             self.main_logger.info("Starting Pipeline...")
             latest_transform: dai.TransformData | None = None
@@ -58,7 +58,24 @@ class OakD(AbstractCamera):
                     transform_msg = qSlamTransform.tryGet()
                     if transform_msg is not None:
                         latest_transform = transform_msg  # type: ignore
-
+                    else:
+                        continue
+                    quat = latest_transform.getQuaternion()
+                    trans = latest_transform.getTranslation()
+ 
+                    quat.qy = -quat.qy
+                    quat.qz = -quat.qz
+ 
+                    trans.y = -trans.y 
+                    trans.z = -trans.z
+ 
+                    qw, qx, qy, qz = (
+                        quat.qw,
+                        quat.qx,
+                        quat.qy,
+                        quat.qz,
+                    )
+ 
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
                     if detectionMsg:
@@ -76,58 +93,43 @@ class OakD(AbstractCamera):
                                         "Skipping detection: waiting for SLAM"
                                     )
                                     continue
-
-                                quat = latest_transform.getQuaternion()
-                                trans = latest_transform.getTranslation()
-
-                                if quat.qw < 0:
-                                    qw, qx, qy, qz = (
-                                        -quat.qw,
-                                        -quat.qx,
-                                        -quat.qy,
-                                        -quat.qz,
-                                    )
-                                else:
-                                    qw, qx, qy, qz = (
-                                        quat.qw,
-                                        quat.qx,
-                                        quat.qy,
-                                        quat.qz,
-                                    )
-
-                                translated_coordinate = (
-                                    FRD_conversion.convert_target_to_FRD(
-                                        cam_target_coord=Coordinate(
-                                            sc.x / 1000.0, sc.y / 1000.0, sc.z / 1000.0
-                                        ),
-                                        origin_cam_q=Quaternion(qw, qx, qy, qz),
-                                        origin_cam_coord=Coordinate(
-                                            trans.x / 1000.0, trans.y / 1000.0, trans.z / 1000.0
-                                        ),
-                                    )
+ 
+                            cam_target_coord = Coordinate(
+                                sc.z / 1000.0, sc.x / 1000.0, sc.y / 1000.0
+                            )
+                            origin_cam_q=Quaternion(qw, qx, qy, qz)
+                            origin_cam_coord=Coordinate(
+                                trans.x, trans.y, trans.z 
+                            )
+ 
+                            translated_coordinate = (
+                                FRD_conversion.convert_target_to_FRD(
+                                    cam_target_coord,
+                                    origin_cam_q,
+                                    origin_cam_coord,
                                 )
-
-                                mapped_target = Target(
-                                    colour=Colours.RED,  # TODO: Replace with actual colour
-                                    location=translated_coordinate,
-                                )
-
-                                self.detections_logger.info(mapped_target)
-
-                                # TODO: Remove print and replace with logging once done with frd conversion stuff
-                                print(
-                                    "SLAM pose t=(%.3f, %.3f, %.3f) q=(%.4f, %.4f, %.4f, %.4f)",
-                                    trans.x,
-                                    trans.y,
-                                    trans.z,
-                                    qw,
-                                    qx,
-                                    qy,
-                                    qz,
-                                )
-                                # self.main_logger.info(
-                                #     f"Detected target: {mapped_target}"
-                                # )
+                            )
+ 
+                            mapped_target = Target(
+                                colour=Colours.RED,  # TODO: Replace with actual colour
+                                location=translated_coordinate,
+                            )
+ 
+                            self.detections_logger.info(mapped_target)
+                            
+                            # self.main_logger.info(
+                            #     f"Detected target: {translated_coordinate}"
+                            # )
+                            # self.main_logger.info(
+                            #     f"Origin-Cam Coord: {origin_cam_coord}"
+                            # )
+                            # self.main_logger.info(
+                            #     f"Origin-Cam Quat: {origin_cam_q}"
+                            # )
+                            # self.main_logger.info(
+                            #     f"Cam-Target Coord: {cam_target_coord}"
+                            # )
+                            
                     time.sleep(0.01)
             finally:
                 slam.saveDatabase()

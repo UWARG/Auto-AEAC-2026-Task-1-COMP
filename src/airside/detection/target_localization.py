@@ -67,7 +67,8 @@ def get_target_coordinates(
 
         # normalized camera direction matrix
         Q_cam = (
-            np.linalg.inv(CAM_MATRIX) @ np.array([kp.x, kp.y, 1], dtype=np.float32).T
+            np.linalg.inv(CAM_MATRIX)
+            @ np.array([float(kp.x), float(kp.y), 1], dtype=np.float32).T
         )
 
         # rotate camera --> body --> ned

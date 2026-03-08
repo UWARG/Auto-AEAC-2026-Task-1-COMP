@@ -41,7 +41,7 @@ class OakD(AbstractCamera):
             add_basalt_vio_rtab(pipeline, cameraBundle)
  
             slam = cameraBundle.slam
-            qSlamTransform = slam.transform.createOutputQueue(maxSize=16, blocking=False)
+            qSlamTransform = slam.transform.createOutputQueue(maxSize=1, blocking=False)
             if ENABLE_RERUN:
                 rerunViewer = RerunNode()
                 slam.transform.link(rerunViewer.inputTrans)
@@ -60,14 +60,8 @@ class OakD(AbstractCamera):
                         latest_transform = transform_msg  # type: ignore
                     else:
                         continue
-                    quat = latest_transform.getQuaternion()
-                    trans = latest_transform.getTranslation()
- 
-                    quat.qy = -quat.qy
-                    quat.qz = -quat.qz
- 
-                    trans.y = -trans.y 
-                    trans.z = -trans.z
+                    quat = latest_transform.getQuaternion() # type: ignore
+                    trans = latest_transform.getTranslation() # type: ignore
  
                     qw, qx, qy, qz = (
                         quat.qw,
@@ -97,9 +91,9 @@ class OakD(AbstractCamera):
                             cam_target_coord = Coordinate(
                                 sc.z / 1000.0, sc.x / 1000.0, sc.y / 1000.0
                             )
-                            origin_cam_q=Quaternion(qw, qx, qy, qz)
-                            origin_cam_coord=Coordinate(
-                                trans.x, trans.y, trans.z 
+                            origin_cam_q = Quaternion(qw, qx, -qy, -qz)
+                            origin_cam_coord = Coordinate(
+                                trans.x, -trans.y, -trans.z
                             )
  
                             translated_coordinate = (

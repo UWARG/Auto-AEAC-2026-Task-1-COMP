@@ -1,9 +1,9 @@
 import threading
 import logging
- 
+
 from airside.detection import FRD_conversion
 from airside.detection.oakd.camera_bundle import CameraBundle
- 
+
 from ..abstract_camera import AbstractCamera
 from util import (
     Colours,
@@ -19,27 +19,30 @@ from airside.detection.oakd.object_tracker import add_object_tracker
 import depthai as dai
 from airside.detection.oakd.rerun_node import RerunNode
 import time
- 
- 
+
+
 ENABLE_RERUN = False
- 
- 
+
+
 class OakD(AbstractCamera):
     def __init__(
         self,
         main_logger: logging.Logger,
         detections_logger: logging.Logger,
+        detailed_detections_logger: logging.Logger,
         stop_event: threading.Event,
     ):
-        super().__init__(main_logger, detections_logger, stop_event)
- 
+        super().__init__(
+            main_logger, detections_logger, detailed_detections_logger, stop_event
+        )
+
     def run(self):
         with dai.Pipeline() as pipeline:
             cameraBundle = CameraBundle(pipeline)
             # qDetections, qFrame = add_object_tracker(pipeline, cameraBundle)
             qDetections = add_object_tracker(pipeline, cameraBundle)
             add_basalt_vio_rtab(pipeline, cameraBundle)
- 
+
             slam = cameraBundle.slam
             qSlamTransform = slam.transform.createOutputQueue(maxSize=1, blocking=False)
             if ENABLE_RERUN:
@@ -49,7 +52,7 @@ class OakD(AbstractCamera):
                 slam.occupancyGridMap.link(rerunViewer.inputGrid)
                 slam.obstaclePCL.link(rerunViewer.inputObstaclePCL)
                 slam.groundPCL.link(rerunViewer.inputGroundPCL)
- 
+
             pipeline.start()
             self.main_logger.info("Starting Pipeline...")
             latest_transform: dai.TransformData | None = None
@@ -60,16 +63,16 @@ class OakD(AbstractCamera):
                         latest_transform = transform_msg  # type: ignore
                     else:
                         continue
-                    quat = latest_transform.getQuaternion() # type: ignore
-                    trans = latest_transform.getTranslation() # type: ignore
- 
+                    quat = latest_transform.getQuaternion()  # type: ignore
+                    trans = latest_transform.getTranslation()  # type: ignore
+
                     qw, qx, qy, qz = (
                         quat.qw,
                         quat.qx,
                         quat.qy,
                         quat.qz,
                     )
- 
+
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
                     if detectionMsg:
@@ -87,15 +90,13 @@ class OakD(AbstractCamera):
                                         "Skipping detection: waiting for SLAM"
                                     )
                                     continue
- 
+
                             cam_target_coord = Coordinate(
                                 sc.z / 1000.0, sc.x / 1000.0, sc.y / 1000.0
                             )
                             origin_cam_q = Quaternion(qw, qx, -qy, -qz)
-                            origin_cam_coord = Coordinate(
-                                trans.x, -trans.y, -trans.z
-                            )
- 
+                            origin_cam_coord = Coordinate(trans.x, -trans.y, -trans.z)
+
                             translated_coordinate = (
                                 FRD_conversion.convert_target_to_FRD(
                                     cam_target_coord,
@@ -103,27 +104,17 @@ class OakD(AbstractCamera):
                                     origin_cam_coord,
                                 )
                             )
- 
+
                             mapped_target = Target(
                                 colour=Colours.RED,  # TODO: Replace with actual colour
                                 location=translated_coordinate,
                             )
- 
+
                             self.detections_logger.info(mapped_target)
-                            
-                            # self.main_logger.info(
-                            #     f"Detected target: {translated_coordinate}"
-                            # )
-                            # self.main_logger.info(
-                            #     f"Origin-Cam Coord: {origin_cam_coord}"
-                            # )
-                            # self.main_logger.info(
-                            #     f"Origin-Cam Quat: {origin_cam_q}"
-                            # )
-                            # self.main_logger.info(
-                            #     f"Cam-Target Coord: {cam_target_coord}"
-                            # )
-                            
+                            self.detailed_detections_logger.info(
+                                f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
+                            )
+
                     time.sleep(0.01)
             finally:
                 slam.saveDatabase()

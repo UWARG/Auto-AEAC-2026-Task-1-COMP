@@ -31,21 +31,28 @@ def main(starting_time: str) -> None:
         main_logger.info("Initializing Mavlink Connection")
         mav_comm = MavlinkComm(main_logger)
 
+
+    detections_formatter = logging.Formatter("%(message)s")
+    main_logger.info("Creating output directories and files")
+
     detections_logger = logging.getLogger("detections")
     detections_logger.setLevel(logging.INFO)
     detections_logger.propagate = False
-
-    detections_formatter = logging.Formatter("%(message)s")
-
-    main_logger.info("Creating output directories and files")
     detections_handler_file = logging.FileHandler(str(output_folder / f"targets_{starting_time}.txt"))
     detections_handler_file.setFormatter(detections_formatter)
     detections_logger.addHandler(detections_handler_file)
 
+    detailed_detections_logger = logging.getLogger("detailed_detections")
+    detailed_detections_logger.setLevel(logging.INFO)
+    detailed_detections_logger.propagate = False
+    detailed_detections_handler_file = logging.FileHandler(str(output_folder / f"detailed_targets_{starting_time}.txt"))
+    detailed_detections_handler_file.setFormatter(detections_formatter)
+    detailed_detections_logger.addHandler(detailed_detections_handler_file)
+
     stop_event = threading.Event()
 
-    oakd = OakD(main_logger, detections_logger, stop_event)
-    # arducam = Arducam(main_logger, detections_logger, stop_event)
+    oakd = OakD(main_logger, detections_logger, detailed_detections_logger, stop_event)
+    # arducam = Arducam(main_logger, detections_logger, detailed_detections_logger, stop_event)
 
     heading_mapping = {
         Direction.NORTH: 0.0,
@@ -83,6 +90,8 @@ def main(starting_time: str) -> None:
 
     # Flush all handlers to ensure data is written to disk
     for handler in detections_logger.handlers:
+        handler.flush()
+    for handler in detailed_detections_logger.handlers:
         handler.flush()
     for handler in main_logger.handlers:
         handler.flush()

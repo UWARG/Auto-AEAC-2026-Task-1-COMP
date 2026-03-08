@@ -34,6 +34,7 @@ def test_2d_simple_conversion_x():
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
 
+
 def test_2d_simple_conversion_y():
     camera_to_target = Coordinate(0, 10, 0)
     drone_rotation = Quaternion(0.707, 0, 0, 0.707)
@@ -48,6 +49,7 @@ def test_2d_simple_conversion_y():
     assert expected.x == pytest.approx(result.x)
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
+
 
 def test_2d_simple_conversion_z():
     camera_to_target = Coordinate(10, 0, 0)
@@ -64,6 +66,7 @@ def test_2d_simple_conversion_z():
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
 
+
 def test_2d_complex_conversion():
     camera_to_target = Coordinate(10, 10, 10)
     drone_rotation = Quaternion(0.5, 0.5, 0.5, 0.5)
@@ -78,4 +81,3 @@ def test_2d_complex_conversion():
     assert expected.x == pytest.approx(result.x)
     assert expected.y == pytest.approx(result.y)
     assert expected.z == pytest.approx(result.z)
-

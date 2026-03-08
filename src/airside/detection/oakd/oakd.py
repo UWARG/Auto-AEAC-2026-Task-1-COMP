@@ -22,6 +22,8 @@ import time
 
 
 ENABLE_RERUN = False
+# If set to -1, the maximum difference theshold is ignored
+MAX_TIMESTAMP_DIFF_SEC = 0.2
 
 
 class OakD(AbstractCamera):
@@ -55,46 +57,60 @@ class OakD(AbstractCamera):
 
             pipeline.start()
             self.main_logger.info("Starting Pipeline...")
-            latest_transform: dai.TransformData | None = None
+
+            transform_timestamp: float | None = None
+            quat: dai.Quaterniond | None = None
+            trans: dai.Point3d | None = None
+
             try:
                 while not self.stop_event.is_set():
-                    transform_msg = qSlamTransform.tryGet()
-                    if transform_msg is not None:
-                        latest_transform = transform_msg  # type: ignore
-                    else:
-                        continue
-                    quat = latest_transform.getQuaternion()  # type: ignore
-                    trans = latest_transform.getTranslation()  # type: ignore
+                    time.sleep(0.01)
 
-                    qw, qx, qy, qz = (
-                        quat.qw,
-                        quat.qx,
-                        quat.qy,
-                        quat.qz,
-                    )
+                    transform_msg = qSlamTransform.tryGet()
+                    if isinstance(transform_msg, dai.TransformData):
+                        quat = transform_msg.getQuaternion()
+                        trans = transform_msg.getTranslation()
+                        transform_timestamp = (
+                            transform_msg.getTimestamp().total_seconds()
+                        )
 
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
-                    if detectionMsg:
-                        for detection in detectionMsg.detections:  # type: ignore
-                            detection: dai.SpatialImgDetection = detection
-                            sc = getattr(detection, "spatialCoordinates", None)
-                            if sc is None:
-                                self.main_logger.error(
-                                    "Detection missing spatial coordinates"
-                                )
-                                continue
-                            if sc:
-                                if latest_transform is None:
-                                    self.main_logger.debug(
-                                        "Skipping detection: waiting for SLAM"
-                                    )
-                                    continue
+                    if detectionMsg and isinstance(
+                        detectionMsg, dai.SpatialImgDetections
+                    ):
+                        if transform_timestamp is None or quat is None or trans is None:
+                            self.main_logger.debug(
+                                "Skipping detection: waiting for SLAM"
+                            )
+                            continue
+
+                        detections_timestamp = (
+                            detectionMsg.getTimestamp().total_seconds()
+                        )
+
+                        if (
+                            MAX_TIMESTAMP_DIFF_SEC == -1
+                            or abs(detections_timestamp - transform_timestamp)
+                            > MAX_TIMESTAMP_DIFF_SEC
+                        ):
+                            self.main_logger.debug(
+                                f"Skipping detection: timestamps out of sync (difference: {abs(detections_timestamp - transform_timestamp)}, detection: {detections_timestamp}, transform: {transform_timestamp})"
+                            )
+                            continue
+
+                        for detection in detectionMsg.detections:
+
+                            spatial_coordinates = detection.spatialCoordinates
 
                             cam_target_coord = Coordinate(
-                                sc.z / 1000.0, sc.x / 1000.0, sc.y / 1000.0
+                                spatial_coordinates.z / 1000.0,
+                                spatial_coordinates.x / 1000.0,
+                                spatial_coordinates.y / 1000.0,
                             )
-                            origin_cam_q = Quaternion(qw, qx, -qy, -qz)
+                            origin_cam_q = Quaternion(
+                                quat.qw, quat.qx, -quat.qy, -quat.qz
+                            )
                             origin_cam_coord = Coordinate(trans.x, -trans.y, -trans.z)
 
                             translated_coordinate = (
@@ -114,8 +130,6 @@ class OakD(AbstractCamera):
                             self.detailed_detections_logger.info(
                                 f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
                             )
-
-                    time.sleep(0.01)
             finally:
                 slam.saveDatabase()
                 pipeline.stop()

@@ -31,21 +31,24 @@ def main(starting_time: str) -> None:
         main_logger.info("Initializing Mavlink Connection")
         mav_comm = MavlinkComm(main_logger)
 
-
     detections_formatter = logging.Formatter("%(message)s")
     main_logger.info("Creating output directories and files")
 
     detections_logger = logging.getLogger("detections")
     detections_logger.setLevel(logging.INFO)
     detections_logger.propagate = False
-    detections_handler_file = logging.FileHandler(str(output_folder / f"targets_{starting_time}.txt"))
+    detections_handler_file = logging.FileHandler(
+        str(output_folder / f"targets_{starting_time}.txt")
+    )
     detections_handler_file.setFormatter(detections_formatter)
     detections_logger.addHandler(detections_handler_file)
 
     detailed_detections_logger = logging.getLogger("detailed_detections")
     detailed_detections_logger.setLevel(logging.INFO)
     detailed_detections_logger.propagate = False
-    detailed_detections_handler_file = logging.FileHandler(str(output_folder / f"detailed_targets_{starting_time}.txt"))
+    detailed_detections_handler_file = logging.FileHandler(
+        str(output_folder / f"detailed_targets_{starting_time}.txt")
+    )
     detailed_detections_handler_file.setFormatter(detections_formatter)
     detailed_detections_logger.addHandler(detailed_detections_handler_file)
 
@@ -106,8 +109,8 @@ def main(starting_time: str) -> None:
 
 
 if __name__ == "__main__":
-    starting_time = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime())
-    
+    starting_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+
     main_logger = logging.getLogger("main")
     main_logger.setLevel(logging.INFO)
     main_logger.propagate = False

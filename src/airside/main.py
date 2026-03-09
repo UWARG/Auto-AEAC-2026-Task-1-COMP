@@ -16,8 +16,12 @@ from airside.mavlink_comm import MavlinkComm
 # If set to false, then the system uses the RC switch to trigger post-processing.
 # If set to true, then post-processing is triggered by pressing enter in the console.
 TRIGGER_DEBUG_MODE = True
-
 USE_MAVLINK = True
+
+POST_PROCESSING_REQUEST_CHANNEL = 11  # RC channel number to monitor for post-processing trigger
+
+OBSTACLE_PCL_FILENAME = "obstaclePCL.ply"
+GROUND_PCL_FILENAME = "groundPCL.ply"
 
 
 def main(starting_time: str) -> None:
@@ -28,8 +32,10 @@ def main(starting_time: str) -> None:
     output_folder.mkdir(exist_ok=True)
 
     if USE_MAVLINK:
-        main_logger.info("Initializing Mavlink Connection")
-        mav_comm = MavlinkComm(main_logger)
+        main_logger.info(f"Initializing Mavlink connection")
+    else:
+        main_logger.info(f"Mavlink connection disabled")
+    mav_comm = MavlinkComm(main_logger, USE_MAVLINK, POST_PROCESSING_REQUEST_CHANNEL)
 
     detections_formatter = logging.Formatter("%(message)s")
     main_logger.info("Creating output directories and files")
@@ -54,26 +60,13 @@ def main(starting_time: str) -> None:
 
     stop_event = threading.Event()
 
-    oakd = OakD(main_logger, detections_logger, detailed_detections_logger, stop_event)
+    obstacle_pcl_path = str(output_folder / OBSTACLE_PCL_FILENAME)
+    ground_pcl_path = str(output_folder / GROUND_PCL_FILENAME)
+
+    oakd = OakD(main_logger, detections_logger, detailed_detections_logger, stop_event, obstacle_pcl_path=obstacle_pcl_path, ground_pcl_path=ground_pcl_path)
     # arducam = Arducam(main_logger, detections_logger, detailed_detections_logger, stop_event)
-
-    heading_mapping = {
-        Direction.NORTH: 0.0,
-        Direction.EAST: 90.0,
-        Direction.SOUTH: 180.0,
-        Direction.WEST: 270.0,
-    }
-    if USE_MAVLINK:
-        main_logger.info("Getting Heading through Mavlink")
-        initial_heading_deg = mav_comm.get_heading()
-    else:
-        initial_heading_deg = 0
-
-    initial_heading = Direction.NORTH
-    for dir, deg in heading_mapping.items():
-        if abs(initial_heading_deg - deg) <= 45:
-            initial_heading = dir
-            break
+    
+    initial_heading = mav_comm.get_heading_direction()
 
     oakd.start()
     # arducam.start()
@@ -99,13 +92,13 @@ def main(starting_time: str) -> None:
     for handler in main_logger.handlers:
         handler.flush()
 
-    if USE_MAVLINK:
-        post_processing.run(
-            str(output_folder / "building.db"),
-            str(output_folder / f"targets_{starting_time}.txt"),
-            mav_comm,
-            initial_heading,
-        )
+    post_processing.run(
+        obstacle_pcl_path,
+        ground_pcl_path,
+        str(output_folder / f"targets_{starting_time}.txt"),
+        mav_comm,
+        initial_heading,
+    )
 
 
 if __name__ == "__main__":
@@ -128,6 +121,9 @@ if __name__ == "__main__":
     )
     main_logger_handler_file.setFormatter(main_formatter)
     main_logger.addHandler(main_logger_handler_file)
+
+    output_folder = Path(__file__).parent.parent.parent.parent.parent / "outputs"
+    output_folder.mkdir(exist_ok=True)
 
     try:
         main(starting_time)

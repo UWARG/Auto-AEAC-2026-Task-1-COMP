@@ -6,6 +6,7 @@ including position tracking, RC channel monitoring, and data stream management.
 """
 
 from pymavlink import mavutil
+from typing import Any
 from util import (
     AIRSIDE_COMPONENT_ID,
     UINT16_MAX,
@@ -37,6 +38,7 @@ class MavlinkComm:
         }
 
         self.post_processing_requested_flag = False
+        self.mav: Any | None = None
 
         if self.use_mavlink:
             while not self.__mavlink_connect():
@@ -101,6 +103,9 @@ class MavlinkComm:
         if not self.use_mavlink:
             self.logger.warning("Mavlink is disabled, skipping processing data stream")
             return False
+        if self.mav is None:
+            self.logger.warning("Mavlink connection is unavailable")
+            return False
         msg = self.mav.recv_match(
             type=[m.value for m in MavlinkMessageType],
             blocking=False,
@@ -112,7 +117,7 @@ class MavlinkComm:
             self.logger.info(f"Received GLOBAL_POSITION_INT: {msg}")
 
             # Extract heading from hdg field (in centidegrees, convert to degrees)
-            if msg.hdg != UINT16_MAX:
+            if msg.hdg is not None and msg.hdg != UINT16_MAX:
                 self.heading = msg.hdg / 100.0
 
             return True
@@ -186,6 +191,9 @@ class MavlinkComm:
         """Send target to ground station."""
         if not self.use_mavlink:
             self.logger.warning(f"Mavlink is disabled, would have sent target: {mapped_target}")
+            return
+        if self.mav is None:
+            self.logger.error("Mavlink connection is unavailable, cannot send target")
             return
         if attempt > 3:
             self.logger.error("Failed to send target to ground after 3 attempts")

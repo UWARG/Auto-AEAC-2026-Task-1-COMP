@@ -6,11 +6,11 @@ including local coordinate representation, MAVLink message types, and RC channel
 """
 
 from enum import Enum
-import cv2 
-import numpy as np 
-import abc 
+import cv2
+import numpy as np
+import abc
 
-import libcamera 
+import libcamera
 import picamera2
 
 UINT16_MAX = 65535
@@ -177,6 +177,7 @@ class Quaternion:
         else:
             return False
 
+
 class BaseCameraDevice(abc.ABC):
     """
     Abstract class for camera device implementations.
@@ -223,7 +224,7 @@ class BaseCameraDevice(abc.ABC):
         Return: Success, image with shape (height, width, channels in BGR).
         """
         raise NotImplementedError
-    
+
 
 class GPSCoord:
     """GPS coordinate (latitude, longitude, altitude)."""
@@ -231,6 +232,7 @@ class GPSCoord:
     lat: float  # degrees
     lon: float  # degrees
     alt: float  # meters above sea level
+
 
 class ConfigOpenCV:
     """
@@ -281,6 +283,7 @@ def create_camera(
 
     return False, None
 
+
 class CameraOpenCV(BaseCameraDevice):
     """
     Class for the OpenCV implementation of the camera.
@@ -321,11 +324,15 @@ class CameraOpenCV(BaseCameraDevice):
 
         return True, CameraOpenCV(cls.__create_key, camera)
 
-    def __init__(self, class_private_create_key: object, camera: cv2.VideoCapture) -> None:
+    def __init__(
+        self, class_private_create_key: object, camera: cv2.VideoCapture
+    ) -> None:
         """
         Private constructor, use create() method.
         """
-        assert class_private_create_key is CameraOpenCV.__create_key, "Use create() method."
+        assert (
+            class_private_create_key is CameraOpenCV.__create_key
+        ), "Use create() method."
 
         self.__camera = camera
 
@@ -346,7 +353,6 @@ class CameraOpenCV(BaseCameraDevice):
             return False, None
 
         return True, image_data
-    
 
 
 class ConfigPiCamera2:
@@ -405,7 +411,9 @@ if picamera2 is None:
         """
 
         @classmethod
-        def create(cls, width: int, height: int, config: ConfigPiCamera2) -> "tuple[False, None]":
+        def create(
+            cls, width: int, height: int, config: ConfigPiCamera2
+        ) -> "tuple[False, None]":
             return False, None
 
         def __init__(self) -> None:
@@ -464,7 +472,9 @@ else:
             """
             Private constructor, use create() method.
             """
-            assert class_private_create_key is CameraPiCamera2.__create_key, "Use create() method."
+            assert (
+                class_private_create_key is CameraPiCamera2.__create_key
+            ), "Use create() method."
 
             self.__camera = camera
             self.__config = config

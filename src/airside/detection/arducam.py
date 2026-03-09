@@ -3,7 +3,16 @@ import logging
 import time
 
 from .abstract_camera import AbstractCamera
-from util import Colours, Coordinate, Target, GPSCoord, ConfigOpenCV, CameraOption, create_camera, ConfigPiCamera2
+from util import (
+    Colours,
+    Coordinate,
+    Target,
+    GPSCoord,
+    ConfigOpenCV,
+    CameraOption,
+    create_camera,
+    ConfigPiCamera2,
+)
 import cv2
 import numpy as np
 
@@ -70,10 +79,12 @@ class Arducam(AbstractCamera):
                     f"picam2 camera {self.camera_index} initialized successfully"
                 )
             else:
-                self.main_logger.error(f"picam2 camera {self.camera_index} failed to initialize")
+                self.main_logger.error(
+                    f"picam2 camera {self.camera_index} failed to initialize"
+                )
 
             return status
-        
+
     def capture_frame(self) -> np.ndarray | None:
         """
         Capture a single frame from the camera.
@@ -118,7 +129,9 @@ class Arducam(AbstractCamera):
                     "Failed frame capture due to camera implementation or timeout"
                 )
             return frame
-        self.main_logger.warning("Attempted to capture frame with initialized camera device")
+        self.main_logger.warning(
+            "Attempted to capture frame with initialized camera device"
+        )
         return None
 
     def __enter__(self) -> "Camera":

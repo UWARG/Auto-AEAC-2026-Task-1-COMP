@@ -29,7 +29,7 @@ def main(starting_time: str) -> None:
 
     if USE_MAVLINK:
         main_logger.info("Initializing Mavlink Connection")
-        mav_comm = MavlinkComm(main_logger)
+        mav_comm = MavlinkComm(main_logger, use_mavlink=USE_MAVLINK)
 
     detections_formatter = logging.Formatter("%(message)s")
     main_logger.info("Creating output directories and files")

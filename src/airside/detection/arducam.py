@@ -2,6 +2,8 @@ import threading
 import logging
 import time
 
+from narwhals import List
+
 from .abstract_camera import AbstractCamera
 from util import Colours, Coordinate, Target, GPSCoord, ConfigOpenCV, CameraOption, create_camera
 import cv2
@@ -106,11 +108,6 @@ class Arducam(AbstractCamera):
             return frame
         main_logger.warning("Attempted to capture frame with initialized camera device")
         return None
-
-
-    def __enter__(self) -> "Camera":
-        """Context manager entry - allows use with 'with' statement."""
-        return self
 
     def find_targets(self, frame: np.ndarray, main_logger: logging.Logger) -> List[TargetDetection]:
         """

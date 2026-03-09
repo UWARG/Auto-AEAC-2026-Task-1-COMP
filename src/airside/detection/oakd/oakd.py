@@ -64,7 +64,6 @@ class OakD(AbstractCamera):
 
         with dai.Pipeline() as pipeline:
             cameraBundle = CameraBundle(pipeline)
-            # qDetections, qFrame = add_object_tracker(pipeline, cameraBundle)
             qDetections = add_object_tracker(pipeline, cameraBundle)
             add_basalt_vio_rtab(pipeline, cameraBundle)
 

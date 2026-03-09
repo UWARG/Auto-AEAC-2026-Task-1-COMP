@@ -42,19 +42,17 @@ def is_coplanar(plane_model1, plane_model2, angle_tol_deg=15.0, dist_tol=0.3):
     return True
 
 
-def find_walls(obstacle_pcl_path: str, ground_pcl_path: str | None = None):
+def find_walls(obstacle_pcl_path: str, ground_pcl_path: str):
 
-    pcd = o3d.io.read_point_cloud(obstacle_pcl_path)
-
-    if ground_pcl_path is not None:
-        ground_pcd = o3d.io.read_point_cloud(ground_pcl_path)
-        pcd += ground_pcd
+    obstacle_pcd = o3d.io.read_point_cloud(obstacle_pcl_path)
+    ground_pcd = o3d.io.read_point_cloud(ground_pcl_path)
+    pcd = obstacle_pcd + ground_pcd
 
     # Downsample for speed
     pcd = pcd.voxel_down_sample(voxel_size=0.05)
 
     # mav_comm.info("Filtering noise...")
-    pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=1.0)
+    pcd, _ = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=1.0)
 
     remaining_cloud = pcd
     extracted_planes = []

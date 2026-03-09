@@ -4,6 +4,11 @@ This is a repo for our comp solution to AEAC 2026 Task 1. Create a new branch to
 
 This project uses the `uv` python build system.
 
+To install `uv` you can run
+```shell
+pip install uv
+```
+
 To install dependencies you can run
 ```shell
 uv sync

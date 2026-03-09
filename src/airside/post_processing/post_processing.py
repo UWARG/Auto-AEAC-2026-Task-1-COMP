@@ -10,10 +10,9 @@ from airside.post_processing import (
 )
 
 
-def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
-    def _generate_ply(db_path: str) -> str:
-        return "pointcloud.ply"
-
+def run(
+    db_path: str, targets_path: str, mav_comm: MavlinkComm, first_direction: Direction
+) -> None:
     def _fit_planes(ply_path: str) -> list[Plane]:
         return wall_detection.find_walls(ply_path)
 
@@ -25,9 +24,7 @@ def run(db_path: str, targets_path: str, mav_comm: MavlinkComm) -> None:
     ) -> list[MappedTarget]:
         return target_rel_position.locate_targets(planes, targets, first_direction)
 
-    ply_path = _generate_ply(db_path)
-
-    planes = _fit_planes(ply_path)
+    planes = _fit_planes(db_path)
 
     targets, first_direction = _get_targets(targets_path)
 

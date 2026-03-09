@@ -8,3 +8,7 @@ venv/
 
 # Logging
 logs/
+notes.txt
+
+#WSL Files
+*Zone.Identifier

@@ -23,9 +23,16 @@ SERIAL_PORT = "/dev/ttyAMA0"
 class MavlinkComm:
     """Handles MAVLink communication and data processing for drone control."""
 
-    def __init__(self, logger: logging.Logger) -> None:
+    def __init__(
+        self,
+        logger: logging.Logger,
+        use_mavlink: bool = True,
+        post_processing_request_channel: int = 11,
+    ) -> None:
         """Initialize drone connection and request data streams."""
         self.logger = logger
+        self.use_mavlink = use_mavlink
+        self.post_processing_request_channel = post_processing_request_channel
         # heading in degrees
         self.heading: float | None = None
 
@@ -36,13 +43,14 @@ class MavlinkComm:
 
         self.post_processing_requested_flag = False
 
-        while not self.__mavlink_connect():
-            self.logger.info("Failed to connect to drone, retrying...")
-            time.sleep(1)
+        if self.use_mavlink:
+            while not self.__mavlink_connect():
+                self.logger.info("Failed to connect to drone, retrying...")
+                time.sleep(1)
 
-        while not self.__request_data_streams():
-            self.logger.error("Failed to request data streams, retrying...")
-            time.sleep(1)
+                while not self.__request_data_streams():
+                    self.logger.error("Failed to request data streams, retrying...")
+                    time.sleep(1)
 
     def __mavlink_connect(self) -> bool:
         """Establish MAVLink connection to drone via serial port."""
@@ -53,6 +61,7 @@ class MavlinkComm:
                 source_component=AIRSIDE_COMPONENT_ID,
                 source_system=1,
             )
+
             self.mav.wait_heartbeat()
             self.logger.info(
                 f"Heartbeat received from system {self.mav.target_system}, component {self.mav.target_component}"
@@ -94,6 +103,9 @@ class MavlinkComm:
 
     def process_data_stream(self) -> bool:
         """Process incoming MAVLink messages and update drone state."""
+        if not self.use_mavlink:
+            self.logger.warning("Mavlink is disabled, skipping processing data stream")
+            return False
         msg = self.mav.recv_match(
             type=[m.value for m in MavlinkMessageType],
             blocking=False,
@@ -124,6 +136,12 @@ class MavlinkComm:
                     channel=rc_channel_num, raw=raw, is_active=raw >= 1200
                 )
 
+                if (
+                    rc_channel_num is self.post_processing_request_channel
+                    and raw >= 1200
+                ):
+                    self.post_processing_requested_flag = True
+
             return True
 
         return False
@@ -144,6 +162,11 @@ class MavlinkComm:
         Get current drone heading as a cardinal direction.
         Return NORTH if heading is unavailable.
         """
+        if not self.use_mavlink:
+            self.logger.warning(
+                "Mavlink is disabled, returning default heading direction NORTH"
+            )
+            return Direction.NORTH
         if self.heading is None:
             self.logger.warning("Position is not available")
             return Direction.NORTH
@@ -151,6 +174,11 @@ class MavlinkComm:
 
     def get_rc_channel(self, channel: int) -> RCChannel:
         """Get RC channel data for specified channel number."""
+        if not self.use_mavlink:
+            self.logger.warning(
+                "Mavlink is disabled, returning default RC channel data"
+            )
+            return RCChannel(channel=channel, raw=0, is_active=False)
         if channel not in self.rc_channels:
             self.logger.warning(f"Channel {channel} is not available")
             return RCChannel(channel=channel, raw=0, is_active=False)
@@ -158,6 +186,9 @@ class MavlinkComm:
 
     def get_heading(self) -> float:
         """Get current drone heading in degrees, returns 0 if unavailable."""
+        if not self.use_mavlink:
+            self.logger.warning("Mavlink is disabled, returning default heading 0.0")
+            return 0.0
         if self.heading is None:
             self.logger.warning("Heading is not available")
             return 0.0
@@ -165,6 +196,11 @@ class MavlinkComm:
 
     def send_mapped_target(self, mapped_target: MappedTarget, attempt: int = 0) -> None:
         """Send target to ground station."""
+        if not self.use_mavlink:
+            self.logger.warning(
+                f"Mavlink is disabled, would have sent target: {mapped_target}"
+            )
+            return
         if attempt > 3:
             self.logger.error("Failed to send target to ground after 3 attempts")
             return

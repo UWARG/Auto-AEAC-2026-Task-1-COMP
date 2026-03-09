@@ -80,12 +80,12 @@ class Coordinate:
 class Target:
     """Represents a target with a color and location."""
 
-    def __init__(self, colour: Colour, location: Coordinate):
+    def __init__(self, colour: Colours, location: Coordinate):
         self.colour = colour
         self.location = location
 
     def __str__(self):
-        return f"(colour={self.colour}, location={self.location})"
+        return f"{self.colour.name}, {self.location}"
 
 
 class MappedTarget:

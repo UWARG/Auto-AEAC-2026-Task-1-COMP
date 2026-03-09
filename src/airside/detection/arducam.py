@@ -2,8 +2,6 @@ import threading
 import logging
 import time
 
-from narwhals import List
-
 from .abstract_camera import AbstractCamera
 from util import Colours, Coordinate, Target, GPSCoord, ConfigOpenCV, CameraOption, create_camera
 import cv2
@@ -29,6 +27,7 @@ class Arducam(AbstractCamera):
         stop_event: threading.Event,
     ):
 
+        print("mode", self.mode)
         super().__init__(
             main_logger, detections_logger, detailed_detections_logger, stop_event
         )
@@ -53,39 +52,52 @@ class Arducam(AbstractCamera):
 
         self.main_logger.info("Stopping Arducam thread.")
 
-    def _initialize_camera(self, main_logger: logging.Logger) -> bool:
+    def _initialize_camera(self) -> bool:
         """
         Initialize camera hardware and apply settings.
         """
         # Initialize Raspberry Pi Camera Module 2 with specified camera index
+        if self.mode == "rpi":
+            print("Attempting to initialize rpi camera")
 
-        if self.mode == "webcam":
-            main_logger.info("Attempting to annitialize webcam camera")
-            # index0 = webcam
-            config = ConfigOpenCV(device_index=0)
-            status, obj = create_camera(
-                camera_option=CameraOption.OPENCV, width=640, height=480, config=config
+            config = ConfigPiCamera2(
+                exposure_time=self.exposure_time, analogue_gain=self.analogue_gain
             )
+            status, obj = create_camera(CameraOption.PICAM2, 500, 500, config)
             self._camera = obj
             if status:
-                main_logger.info(
-                    f"OpenCV camera {self.camera_index} initialized successfully"
+                self.main_logger.info(
+                    f"picam2 camera {self.camera_index} initialized successfully"
                 )
             else:
-                main_logger.error(f"OpenCV camera failed to initialize")
-            return status
+                self.main_logger.error(f"picam2 camera {self.camera_index} failed to initialize")
 
-    def capture_frame(self, main_logger: logging.Logger) -> np.ndarray | None:
+            return status
+        
+    def capture_frame(self) -> np.ndarray | None:
         """
         Capture a single frame from the camera.
         """
+        # OAK-D uses its own pipeline, not BaseCameraDevice
+        if self.mode == "oakd":
+            if self._oakd_queue is None:
+                self.main_logger.warning("OAK-D queue not initialized")
+                return None
+            frame_msg = None
+            if self._oakd_current_frame is None:
+                self._oakd_current_frame = self._oakd_queue.get()
+            else:
+                newframe = self._oakd_queue.tryGet()
+                if newframe is not None:
+                    self._oakd_current_frame = newframe
+            return self._oakd_current_frame.getCvFrame()
 
-        if self._camera is not None:
+        elif self._camera is not None:
             # Update simulation camera position from MAVLink
             if self.mode == "sim":
 
                 if self._mav_comm is None:
-                    main_logger.error("MavlinkComm instance required for sim mode")
+                    self.main_logger.error("MavlinkComm instance required for sim mode")
                     return None
 
                 # Get current position and heading from MAVLink
@@ -102,20 +114,24 @@ class Arducam(AbstractCamera):
 
             status, frame = self._camera.run()
             if not status:
-                main_logger.warning(
+                self.main_logger.warning(
                     "Failed frame capture due to camera implementation or timeout"
                 )
             return frame
-        main_logger.warning("Attempted to capture frame with initialized camera device")
+        self.main_logger.warning("Attempted to capture frame with initialized camera device")
         return None
 
-    def find_targets(self, frame: np.ndarray, main_logger: logging.Logger) -> List[TargetDetection]:
+    def __enter__(self) -> "Camera":
+        """Context manager entry - allows use with 'with' statement."""
+        return self
+
+    def find_targets(self, frame: np.ndarray) -> List[TargetDetection]:
         """
         Detect colored circular targets in the frame.
         Returns the color of the circular target closest to the frame center.
         """
         if frame is None or frame.size == 0:
-            main_logger.warning("Invalid frame provided to colour_in_frame method")
+            self.main_logger.warning("Invalid frame provided to colour_in_frame method")
             return []
 
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)

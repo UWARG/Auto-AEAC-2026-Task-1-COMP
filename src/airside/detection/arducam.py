@@ -14,7 +14,9 @@ class Arducam(AbstractCamera):
         detailed_detections_logger: logging.Logger,
         stop_event: threading.Event,
     ):
-        super().__init__(main_logger, detections_logger, detailed_detections_logger, stop_event)
+        super().__init__(
+            main_logger, detections_logger, detailed_detections_logger, stop_event
+        )
 
     def run(self):
         while not self.stop_event.is_set():

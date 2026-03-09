@@ -7,6 +7,7 @@ from airside.post_processing import (
     cluster_estimation,
 )
 
+
 def _parse_target_line(line: str) -> Target | None:
     # Expected format from Target.__str__: "COLOUR, (x, y, z)"
     line = line.strip()
@@ -82,7 +83,9 @@ def run(
         if not clusters:
             return raw_targets
 
-        dominant_colour = Counter(target.colour for target in raw_targets).most_common(1)[0][0]
+        dominant_colour = Counter(target.colour for target in raw_targets).most_common(
+            1
+        )[0][0]
         clustered_targets: list[Target] = []
         for mean, _, _ in clusters:
             clustered_targets.append(

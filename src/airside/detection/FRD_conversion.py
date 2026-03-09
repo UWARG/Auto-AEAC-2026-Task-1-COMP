@@ -3,7 +3,6 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 
-@staticmethod
 def convert_target_to_FRD(
     cam_target_coord: Coordinate, origin_cam_q: Quaternion, origin_cam_coord: Coordinate
 ) -> Coordinate:

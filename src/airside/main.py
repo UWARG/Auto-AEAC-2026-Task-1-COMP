@@ -18,7 +18,9 @@ from airside.mavlink_comm import MavlinkComm
 TRIGGER_DEBUG_MODE = True
 USE_MAVLINK = True
 
-POST_PROCESSING_REQUEST_CHANNEL = 11  # RC channel number to monitor for post-processing trigger
+POST_PROCESSING_REQUEST_CHANNEL = (
+    11  # RC channel number to monitor for post-processing trigger
+)
 
 OBSTACLE_PCL_FILENAME = "obstaclePCL.ply"
 GROUND_PCL_FILENAME = "groundPCL.ply"
@@ -63,9 +65,16 @@ def main(starting_time: str) -> None:
     obstacle_pcl_path = str(output_folder / OBSTACLE_PCL_FILENAME)
     ground_pcl_path = str(output_folder / GROUND_PCL_FILENAME)
 
-    oakd = OakD(main_logger, detections_logger, detailed_detections_logger, stop_event, obstacle_pcl_path=obstacle_pcl_path, ground_pcl_path=ground_pcl_path)
+    oakd = OakD(
+        main_logger,
+        detections_logger,
+        detailed_detections_logger,
+        stop_event,
+        obstacle_pcl_path=obstacle_pcl_path,
+        ground_pcl_path=ground_pcl_path,
+    )
     # arducam = Arducam(main_logger, detections_logger, detailed_detections_logger, stop_event)
-    
+
     initial_heading = mav_comm.get_heading_direction()
 
     oakd.start()
@@ -121,9 +130,6 @@ if __name__ == "__main__":
     )
     main_logger_handler_file.setFormatter(main_formatter)
     main_logger.addHandler(main_logger_handler_file)
-
-    output_folder = Path(__file__).parent.parent.parent.parent.parent / "outputs"
-    output_folder.mkdir(exist_ok=True)
 
     try:
         main(starting_time)

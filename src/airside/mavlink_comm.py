@@ -24,7 +24,12 @@ SERIAL_PORT = "/dev/ttyAMA0"
 class MavlinkComm:
     """Handles MAVLink communication and data processing for drone control."""
 
-    def __init__(self, logger: logging.Logger, use_mavlink: bool = True, post_processing_request_channel: int = 11) -> None:
+    def __init__(
+        self,
+        logger: logging.Logger,
+        use_mavlink: bool = True,
+        post_processing_request_channel: int = 11,
+    ) -> None:
         """Initialize drone connection and request data streams."""
         self.logger = logger
         self.use_mavlink = use_mavlink
@@ -136,7 +141,10 @@ class MavlinkComm:
                     channel=rc_channel_num, raw=raw, is_active=raw >= 1200
                 )
 
-                if rc_channel_num is self.post_processing_request_channel and raw >= 1200:
+                if (
+                    rc_channel_num is self.post_processing_request_channel
+                    and raw >= 1200
+                ):
                     self.post_processing_requested_flag = True
 
             return True
@@ -160,7 +168,9 @@ class MavlinkComm:
         Return NORTH if heading is unavailable.
         """
         if not self.use_mavlink:
-            self.logger.warning("Mavlink is disabled, returning default heading direction NORTH")
+            self.logger.warning(
+                "Mavlink is disabled, returning default heading direction NORTH"
+            )
             return Direction.NORTH
         if self.heading is None:
             self.logger.warning("Position is not available")
@@ -170,7 +180,9 @@ class MavlinkComm:
     def get_rc_channel(self, channel: int) -> RCChannel:
         """Get RC channel data for specified channel number."""
         if not self.use_mavlink:
-            self.logger.warning("Mavlink is disabled, returning default RC channel data")
+            self.logger.warning(
+                "Mavlink is disabled, returning default RC channel data"
+            )
             return RCChannel(channel=channel, raw=0, is_active=False)
         if channel not in self.rc_channels:
             self.logger.warning(f"Channel {channel} is not available")
@@ -190,7 +202,9 @@ class MavlinkComm:
     def send_mapped_target(self, mapped_target: MappedTarget, attempt: int = 0) -> None:
         """Send target to ground station."""
         if not self.use_mavlink:
-            self.logger.warning(f"Mavlink is disabled, would have sent target: {mapped_target}")
+            self.logger.warning(
+                f"Mavlink is disabled, would have sent target: {mapped_target}"
+            )
             return
         if self.mav is None:
             self.logger.error("Mavlink connection is unavailable, cannot send target")

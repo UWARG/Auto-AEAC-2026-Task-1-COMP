@@ -45,9 +45,7 @@ class OakD(AbstractCamera):
         self.ground_pcl_path = ground_pcl_path
 
     def run(self):
-        def _save_pcl(
-            points: np.ndarray | None, output_path: str
-        ) -> None:
+        def _save_pcl(points: np.ndarray | None, output_path: str) -> None:
             cloud = o3d.geometry.PointCloud()
 
             if points is not None and len(points) > 0:

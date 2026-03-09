@@ -3,8 +3,7 @@ import logging
 import time
 
 from .abstract_camera import AbstractCamera
-from util import Colours, Coordinate, Target
-
+from util import Colours, Coordinate, Target, GPSCoord, ConfigOpenCV, CameraOption, create_camera
 import cv2
 import numpy as np
 
@@ -20,11 +19,6 @@ class TargetDetection:
 
 
 class Arducam(AbstractCamera):
-    # Default camera settings optimized for IR beacon detection
-    DEFAULT_EXPOSURE_TIME = 15  # microseconds - very fast to reduce motion blur
-    DEFAULT_ANALOGUE_GAIN = 16.0  # high gain to amplify IR beacon signal
-    DEFAULT_AUTO_EXPOSURE = False  # disable to maintain consistent brightness
-
     def __init__(
         self,
         main_logger: logging.Logger,
@@ -33,24 +27,12 @@ class Arducam(AbstractCamera):
         stop_event: threading.Event,
     ):
 
-        # self.camera_index = camera_index
-        # self.exposure_time = exposure_time
-        # self.analogue_gain = analogue_gain
-        # self.auto_exposure_enabled = auto_exposure
-        # self.mode = mode
-        # self._camera: BaseCameraDevice | None = None
-        # self._mav_comm = mav_comm
-        # OAK-D specific state
-        self._oakd_pipeline = None
-        self._oakd_current_frame = None
-        self._oakd_queue = None
-        print("mode", self.mode)
         super().__init__(
             main_logger, detections_logger, detailed_detections_logger, stop_event
         )
 
         while not self.__initialize_camera():
-            logging.error(f"Failed to initialize camera, retrying in 1 second...")
+            main_logger.error(f"Failed to initialize camera, retrying in 1 second...")
             time.sleep(1)
 
     def run(self):
@@ -69,32 +51,14 @@ class Arducam(AbstractCamera):
 
         self.main_logger.info("Stopping Arducam thread.")
 
-    def _initialize_camera(self) -> bool:
+    def _initialize_camera(self, main_logger: logging.Logger) -> bool:
         """
         Initialize camera hardware and apply settings.
         """
         # Initialize Raspberry Pi Camera Module 2 with specified camera index
-        if self.mode == "rpi":
-            print("Attempting to initialize rpi camera")
-            from warg_common.camera.camera_picamera2 import ConfigPiCamera2
 
-            config = ConfigPiCamera2(
-                exposure_time=self.exposure_time, analogue_gain=self.analogue_gain
-            )
-            status, obj = create_camera(CameraOption.PICAM2, 500, 500, config)
-            self._camera = obj
-            if status:
-                logging.info(
-                    f"picam2 camera {self.camera_index} initialized successfully"
-                )
-            else:
-                logging.error(f"picam2 camera {self.camera_index} failed to initialize")
-
-            return status
-        elif self.mode == "webcam":
-            print("Attempting to annitialize webcam camera")
-            from warg_common.camera.camera_opencv import ConfigOpenCV
-
+        if self.mode == "webcam":
+            main_logger.info("Attempting to annitialize webcam camera")
             # index0 = webcam
             config = ConfigOpenCV(device_index=0)
             status, obj = create_camera(
@@ -102,116 +66,24 @@ class Arducam(AbstractCamera):
             )
             self._camera = obj
             if status:
-                logging.info(
-                    f"opencv camera {self.camera_index} initialized successfully"
+                main_logger.info(
+                    f"OpenCV camera {self.camera_index} initialized successfully"
                 )
             else:
-                logging.error(f"opencv camera {self.camera_index} failed to initialize")
-            return status
-        elif self.mode == "oakd":
-            print("Attempting to initialize OAK-D camera")
-            import depthai as dai
-
-            try:
-                self._oakd_pipeline = dai.Pipeline()
-                cam = self._oakd_pipeline.create(dai.node.Camera).build()
-                self._oakd_queue = cam.requestOutput(
-                    (640, 480), dai.ImgFrame.Type.BGR888p
-                ).createOutputQueue(maxSize=4, blocking=False)
-                self._oakd_pipeline.start()
-                logging.info(f"OAK-D camera initialized successfully")
-                return True
-            except Exception as e:
-                logging.error(f"OAK-D camera failed to initialize: {e}")
-                return False
-        else:
-            # sim
-            from warg_common.simulator.world import create_demo_world
-            from warg_common.simulator.coordinates import (
-                CoordinateTransform,
-                GPSCoord,
-                LocalCoord,
-            )
-            from warg_common.simulator.camera import (
-                SimCamera,
-                CameraConfig as SimCameraConfig,
-            )
-
-            if self._mav_comm is None:
-                logging.error(
-                    "MavlinkComm instance required for sim mode initialization"
-                )
-                return False
-
-            # Wait for first GPS position from MAVLink
-            logging.info("Waiting for initial GPS position from MAVLink...")
-            max_attempts = 100
-            for attempt in range(max_attempts):
-                # Process MAVLink messages to get position
-                self._mav_comm.process_data_stream()
-                position = self._mav_comm.get_position()
-
-                # Check if we got a valid position (not the default 0,0,0)
-                if position.lat != 0 or position.lon != 0:
-                    logging.info(f"Got initial GPS position: {position}")
-                    break
-
-                if attempt == max_attempts - 1:
-                    logging.error("Failed to get initial GPS position from MAVLink")
-                    return False
-
-                time.sleep(0.1)
-
-            # Initialize coordinate transform with first GPS position
-            # Drone's starting position becomes local (0, 0, 0)
-            transform = CoordinateTransform()
-            gps_origin = GPSCoord(lat=position.lat, lon=position.lon, alt=position.alt)
-            transform.set_origin(gps_origin, LocalCoord(0, 0, 0))
-            logging.info(
-                f"Initialized coordinate transform with origin: lat={position.lat}, lon={position.lon}, alt={position.alt}m"
-            )
-
-            pitch = 0 if self.camera_index else -90
-
-            config = SimCameraConfig(
-                fov_deg=90,
-                pitch_deg=pitch,
-                world=create_demo_world(),
-                transform=transform,
-            )
-            status, obj = SimCamera.create(640, 480, config)
-            self._camera = obj
-            if status:
-                logging.info(f"sim camera {self.camera_index} initialized successfully")
-            else:
-                logging.error(f"sim camera {self.camera_index} failed to initialize")
+                main_logger.error(f"OpenCV camera failed to initialize")
             return status
 
-    def capture_frame(self) -> np.ndarray | None:
+    def capture_frame(self, main_logger: logging.Logger) -> np.ndarray | None:
         """
         Capture a single frame from the camera.
         """
-        # OAK-D uses its own pipeline, not BaseCameraDevice
-        if self.mode == "oakd":
-            if self._oakd_queue is None:
-                logging.warning("OAK-D queue not initialized")
-                return None
-            frame_msg = None
-            if self._oakd_current_frame is None:
-                self._oakd_current_frame = self._oakd_queue.get()
-            else:
-                newframe = self._oakd_queue.tryGet()
-                if newframe is not None:
-                    self._oakd_current_frame = newframe
-            return self._oakd_current_frame.getCvFrame()
 
-        elif self._camera is not None:
+        if self._camera is not None:
             # Update simulation camera position from MAVLink
             if self.mode == "sim":
-                from warg_common.simulator.coordinates import GPSCoord
 
                 if self._mav_comm is None:
-                    logging.error("MavlinkComm instance required for sim mode")
+                    main_logger.error("MavlinkComm instance required for sim mode")
                     return None
 
                 # Get current position and heading from MAVLink
@@ -228,32 +100,25 @@ class Arducam(AbstractCamera):
 
             status, frame = self._camera.run()
             if not status:
-                logging.warning(
+                main_logger.warning(
                     "Failed frame capture due to camera implementation or timeout"
                 )
             return frame
-        logging.warning("Attempted to capture frame with initialized camera device")
+        main_logger.warning("Attempted to capture frame with initialized camera device")
         return None
 
-    def is_initialized(self) -> bool:
-        """
-        Check if camera is initialized.
-        """
-        if self.mode == "oakd":
-            return self._oakd_pipeline is not None
-        return self._camera is not None
 
     def __enter__(self) -> "Camera":
         """Context manager entry - allows use with 'with' statement."""
         return self
 
-    def find_targets(self, frame: np.ndarray) -> List[TargetDetection]:
+    def find_targets(self, frame: np.ndarray, main_logger: logging.Logger) -> List[TargetDetection]:
         """
         Detect colored circular targets in the frame.
         Returns the color of the circular target closest to the frame center.
         """
         if frame is None or frame.size == 0:
-            logging.warning("Invalid frame provided to colour_in_frame method")
+            main_logger.warning("Invalid frame provided to colour_in_frame method")
             return []
 
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)

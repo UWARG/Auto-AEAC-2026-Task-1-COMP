@@ -140,7 +140,7 @@ def find_walls(filename: str):
 
         n_i = np.array(merged_walls[i]["models"][0][:3])
         n_i = n_i / np.linalg.norm(n_i)
-o3d
+
         for j in range(i + 1, len(merged_walls)):
             cloud_j = o3d.geometry.PointCloud()
             for c in merged_walls[j]["clouds"]:

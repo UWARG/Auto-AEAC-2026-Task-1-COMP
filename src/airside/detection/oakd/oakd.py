@@ -90,8 +90,8 @@ class OakD(AbstractCamera):
                         )
 
                         if (
-                            MAX_TIMESTAMP_DIFF_SEC == -1
-                            or abs(detections_timestamp - transform_timestamp)
+                            MAX_TIMESTAMP_DIFF_SEC != -1
+                            and abs(detections_timestamp - transform_timestamp)
                             > MAX_TIMESTAMP_DIFF_SEC
                         ):
                             self.main_logger.debug(

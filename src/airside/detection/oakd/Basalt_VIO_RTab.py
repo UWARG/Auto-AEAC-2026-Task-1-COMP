@@ -22,7 +22,6 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None)
             "RGBD/CreateOccupancyGrid": "true",
             "Grid/3D": "true",
             "Rtabmap/SaveWMState": "true",
-            "Grid/CellSize": "0.05",
         }
         slam.setParams(params)
 
@@ -33,9 +32,6 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None)
         imu.setMaxBatchReports(10)
 
         stereo.setExtendedDisparity(True)
-        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-        stereo.setLeftRightCheck(True)
-        stereo.setSubpixel(True)
 
         stereo.syncedLeft.link(odom.left)
         stereo.syncedRight.link(odom.right)

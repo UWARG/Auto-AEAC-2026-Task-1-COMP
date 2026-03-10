@@ -98,9 +98,22 @@ def add_object_tracker(pipeline: dai.Pipeline, cameras: CameraBundle):
     rgb_output.link(image_align.inputAlignTo)
 
     spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork)
-    spatial_detection_network.setBlob(
-        dai.OpenVINO.Blob(dai.OpenVINO.Version.VERSION_2021_4, "yolov6n_coco_640x640")
-    )
+    model_desc = dai.NNModelDescription("yolov6-nano")
+    model_path_getter = getattr(model_desc, "getModelPath", None)
+    if callable(model_path_getter):
+        model_path = model_path_getter()
+        if isinstance(model_path, str):
+            spatial_detection_network.setBlobPath(Path(model_path))
+        elif isinstance(model_path, Path):
+            spatial_detection_network.setBlobPath(model_path)
+        else:
+            raise RuntimeError(
+                f"Unexpected model path type: {type(model_path).__name__}"
+            )
+    else:
+        raise RuntimeError(
+            "Unable to resolve yolov6-nano model path from DepthAI NNModelDescription"
+        )
     rgb_output.link(spatial_detection_network.input)
     image_align.outputAligned.link(spatial_detection_network.inputDepth)
     spatial_detection_network.setConfidenceThreshold(0.6)

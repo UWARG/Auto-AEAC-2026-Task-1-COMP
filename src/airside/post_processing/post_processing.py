@@ -87,6 +87,9 @@ def run(
     if not targets:
         mav_comm.logger.warning("No targets available for localization")
         return
+    
+    mav_comm.logger.info(f"Fitted planes: {planes}")
+    mav_comm.logger.info(f"Targets to locate: {targets}")
 
     mapped_targets = _locate_targets(planes, targets, first_direction)
 

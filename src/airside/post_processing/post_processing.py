@@ -89,7 +89,7 @@ def run(
         return
     
     mav_comm.logger.info(f"Fitted planes: {planes}")
-    mav_comm.logger.info(f"Targets to locate: {targets}")
+    mav_comm.logger.info(f"Targets to locate: {[(target.colour.name, target.location.x, target.location.y, target.location.z) for target in targets]}")
 
     mapped_targets = _locate_targets(planes, targets, first_direction)
 

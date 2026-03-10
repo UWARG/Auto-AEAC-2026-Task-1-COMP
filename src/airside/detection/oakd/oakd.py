@@ -112,109 +112,116 @@ class OakD(AbstractCamera):
 
             try:
                 while not self.stop_event.is_set():
-                    time.sleep(0.01)
+                    try:
+                        time.sleep(0.01)
 
-                    transform_msg = qSlamTransform.tryGet()
-                    print(f"Got transform message: {transform_msg.__class__}")
-                    if isinstance(transform_msg, dai.TransformData):
-                        quat = transform_msg.getQuaternion()
-                        trans = transform_msg.getTranslation()
-                        raw_timestamp = transform_msg.getTimestamp()
-                        transform_timestamp = raw_timestamp.total_seconds()
-                        self.main_logger.debug(
-                            f"SLAM transform | raw: {raw_timestamp} | seconds: {transform_timestamp} | quat: {quat} | trans: {trans}"
-                        )
-
-                    obstacle_msg = _drain_latest(qObstaclePCL)
-                    if obstacle_msg is not None:
-                        latest_obstacle_points = _extract_points(obstacle_msg)
-                        if latest_obstacle_points is not None:
-                            obstacle_points = latest_obstacle_points
-
-                    ground_msg = _drain_latest(qGroundPCL)
-                    if ground_msg is not None:
-                        latest_ground_points = _extract_points(ground_msg)
-                        if latest_ground_points is not None:
-                            ground_points = latest_ground_points
-
-                    # Get tracker outputs
-                    detectionMsg = qDetections.tryGet()
-                    if detectionMsg and isinstance(
-                        detectionMsg, dai.SpatialImgDetections
-                    ):
-                        if transform_timestamp is None or quat is None or trans is None:
+                        transform_msg = qSlamTransform.tryGet()
+                        print(f"Got transform message: {transform_msg}")
+                        if isinstance(transform_msg, dai.TransformData):
+                            quat = transform_msg.getQuaternion()
+                            trans = transform_msg.getTranslation()
+                            raw_timestamp = transform_msg.getTimestamp()
+                            transform_timestamp = raw_timestamp.total_seconds()
                             self.main_logger.debug(
-                                f"SLAM not ready, logging {len(detectionMsg.detections)} raw detections"
+                                f"SLAM transform | raw: {raw_timestamp} | seconds: {transform_timestamp} | quat: {quat} | trans: {trans}"
                             )
+
+                        obstacle_msg = _drain_latest(qObstaclePCL)
+                        if obstacle_msg is not None:
+                            latest_obstacle_points = _extract_points(obstacle_msg)
+                            if latest_obstacle_points is not None:
+                                obstacle_points = latest_obstacle_points
+
+                        ground_msg = _drain_latest(qGroundPCL)
+                        if ground_msg is not None:
+                            latest_ground_points = _extract_points(ground_msg)
+                            if latest_ground_points is not None:
+                                ground_points = latest_ground_points
+
+                        # Get tracker outputs
+                        detectionMsg = qDetections.tryGet()
+                        if detectionMsg and isinstance(
+                            detectionMsg, dai.SpatialImgDetections
+                        ):
+                            if transform_timestamp is None or quat is None or trans is None:
+                                self.main_logger.debug(
+                                    f"SLAM not ready, logging {len(detectionMsg.detections)} raw detections"
+                                )
+                                for detection in detectionMsg.detections:
+                                    spatial_coordinates = detection.spatialCoordinates
+                                    cam_target_coord = Coordinate(
+                                        spatial_coordinates.z / 1000.0,
+                                        spatial_coordinates.x / 1000.0,
+                                        spatial_coordinates.y / 1000.0,
+                                    )
+                                    # Log without FRD conversion when SLAM not available
+                                    mapped_target = Target(
+                                        colour=Colours.RED,
+                                        location=cam_target_coord,
+                                    )
+                                    self.main_logger.info(
+                                        f"Result (no SLAM): {mapped_target}"
+                                    )
+                                continue
+
+                            detections_timestamp = (
+                                detectionMsg.getTimestamp().total_seconds()
+                            )
+
+                            self.main_logger.debug(
+                                f"Timestamp comparison | detection: {detections_timestamp:.6f}s | transform: {transform_timestamp:.6f}s | diff: {abs(detections_timestamp - transform_timestamp):.6f}s"
+                            )
+
+                            if (
+                                MAX_TIMESTAMP_DIFF_SEC != -1
+                                and abs(detections_timestamp - transform_timestamp)
+                                > MAX_TIMESTAMP_DIFF_SEC
+                            ):
+                                self.main_logger.debug(
+                                    f"Skipping detection: timestamps out of sync (difference: {abs(detections_timestamp - transform_timestamp)}, detection: {detections_timestamp}, transform: {transform_timestamp})"
+                                )
+                                continue
+
                             for detection in detectionMsg.detections:
+
                                 spatial_coordinates = detection.spatialCoordinates
+
                                 cam_target_coord = Coordinate(
                                     spatial_coordinates.z / 1000.0,
                                     spatial_coordinates.x / 1000.0,
                                     spatial_coordinates.y / 1000.0,
                                 )
-                                # Log without FRD conversion when SLAM not available
+                                origin_cam_q = Quaternion(
+                                    quat.qw, quat.qx, -quat.qy, -quat.qz
+                                )
+                                origin_cam_coord = Coordinate(trans.x, -trans.y, -trans.z)
+
+                                translated_coordinate = (
+                                    FRD_conversion.convert_target_to_FRD(
+                                        cam_target_coord,
+                                        origin_cam_q,
+                                        origin_cam_coord,
+                                    )
+                                )
+
                                 mapped_target = Target(
-                                    colour=Colours.RED,
-                                    location=cam_target_coord,
+                                    colour=Colours.RED,  # TODO: Replace with actual colour
+                                    location=translated_coordinate,
                                 )
-                                self.main_logger.info(
-                                    f"Result (no SLAM): {mapped_target}"
-                                )
-                            continue
 
-                        detections_timestamp = (
-                            detectionMsg.getTimestamp().total_seconds()
+                                self.detections_logger.info(mapped_target)
+                                self.detailed_detections_logger.info(
+                                    f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
+                                )
+                                self.main_logger.debug(
+                                    f"Logged detection with SLAM pose | timestamp: {detections_timestamp}, transform timestamp: {transform_timestamp}"
+                                )
+                    except Exception as e:
+                        self.main_logger.error(
+                            f"Error in detection loop: {e}", exc_info=True
                         )
-
-                        self.main_logger.debug(
-                            f"Timestamp comparison | detection: {detections_timestamp:.6f}s | transform: {transform_timestamp:.6f}s | diff: {abs(detections_timestamp - transform_timestamp):.6f}s"
-                        )
-
-                        if (
-                            MAX_TIMESTAMP_DIFF_SEC != -1
-                            and abs(detections_timestamp - transform_timestamp)
-                            > MAX_TIMESTAMP_DIFF_SEC
-                        ):
-                            self.main_logger.debug(
-                                f"Skipping detection: timestamps out of sync (difference: {abs(detections_timestamp - transform_timestamp)}, detection: {detections_timestamp}, transform: {transform_timestamp})"
-                            )
-                            continue
-
-                        for detection in detectionMsg.detections:
-
-                            spatial_coordinates = detection.spatialCoordinates
-
-                            cam_target_coord = Coordinate(
-                                spatial_coordinates.z / 1000.0,
-                                spatial_coordinates.x / 1000.0,
-                                spatial_coordinates.y / 1000.0,
-                            )
-                            origin_cam_q = Quaternion(
-                                quat.qw, quat.qx, -quat.qy, -quat.qz
-                            )
-                            origin_cam_coord = Coordinate(trans.x, -trans.y, -trans.z)
-
-                            translated_coordinate = (
-                                FRD_conversion.convert_target_to_FRD(
-                                    cam_target_coord,
-                                    origin_cam_q,
-                                    origin_cam_coord,
-                                )
-                            )
-
-                            mapped_target = Target(
-                                colour=Colours.RED,  # TODO: Replace with actual colour
-                                location=translated_coordinate,
-                            )
-
-                            self.detections_logger.info(mapped_target)
-                            self.detailed_detections_logger.info(
-                                f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
-                            )
-                            self.main_logger.debug(
-                                f"Logged detection with SLAM pose | timestamp: {detections_timestamp}, transform timestamp: {transform_timestamp}"
-                            )
+                        # Continue running despite errors
+                        continue
             finally:
                 final_obstacle_msg = _drain_latest(qObstaclePCL)
                 if final_obstacle_msg is not None:

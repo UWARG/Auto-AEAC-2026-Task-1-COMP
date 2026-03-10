@@ -121,6 +121,7 @@ class OakD(AbstractCamera):
                         transform_timestamp = (
                             transform_msg.getTimestamp().total_seconds()
                         )
+                        print(f"Got SLAM transform | timestamp: {transform_msg.getTimestamp()}")
                         print(f"Got: {quat}, {trans}, {transform_timestamp}")
 
                     obstacle_msg = _drain_latest(qObstaclePCL)

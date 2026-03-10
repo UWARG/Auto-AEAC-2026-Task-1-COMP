@@ -26,6 +26,7 @@ def get_target_coordinates(
     pitch: float,
     yaw: float,
     dist_reading: float,
+    roll_threshold: float,
 ) -> list[Coordinate]:
     """
     Calculates target positions in NED coordinates using downwards camera detections,
@@ -34,9 +35,16 @@ def get_target_coordinates(
         detections_: List of bounding boxes from target detections
         roll, pitch and yaw: euler angles of drone (degrees)
         dist_reading: range finder reading (meters)
+        roll_threshold: maximum roll of the drone where detections are still accepted (degrees)
     Returns:
         - List of Coordinate objects corresponding to detections (NED)
     """
+    # Check conditions to run script
+    if abs(roll) > roll_threshold:  # roll is beyond threshold
+        return []
+
+    if not detections_:  # no detections
+        return []
 
     # === prep transformation matricies ===
     # cam to body

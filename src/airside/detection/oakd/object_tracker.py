@@ -7,9 +7,16 @@ from airside.detection.oakd.camera_bundle import CameraBundle
 
 def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None):
     cameras = cameras or CameraBundle(p)
-    depthNode = cameras.stereo
+    depthNode = p.create(dai.node.StereoDepth)
+    cameras.leftOutput.link(depthNode.left)
+    cameras.rightOutput.link(depthNode.right)
+
     depthNode.setExtendedDisparity(True)
     depthNode.setOutputSize(640, 400)
+    depthNode.setLeftRightCheck(True)
+    depthNode.setSubpixel(True)
+    depthNode.enableDistortionCorrection(True)
+    depthNode.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
     spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
         cameras.camRgb, depthNode, dai.NNModelDescription("yolov6-nano")

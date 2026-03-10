@@ -155,8 +155,7 @@ class OakD(AbstractCamera):
                                     colour=Colours.RED,
                                     location=cam_target_coord,
                                 )
-                                self.detections_logger.info(mapped_target)
-                                self.detailed_detections_logger.info(
+                                self.main_logger.info(
                                     f"Result (no SLAM): {mapped_target} | Detection: {cam_target_coord}"
                                 )
                             continue

@@ -106,7 +106,7 @@ class OakD(AbstractCamera):
 
             transform_timestamp: float | None = None
             quat: dai.Quaterniond | None = None
-            trans: dai.Point3d | None = None
+            trans_mm: dai.Point3d | None = None
             obstacle_points: np.ndarray | None = None
             ground_points: np.ndarray | None = None
 
@@ -119,11 +119,10 @@ class OakD(AbstractCamera):
                         if isinstance(transform_msg, dai.TransformData):
                             quat = transform_msg.getQuaternion()
                             trans_mm = transform_msg.getTranslation()
-                            trans = dai.Point3d(trans_mm.x / 1000.0, trans_mm.y / 1000.0, trans_mm.z / 1000.0)
-                            raw_timestamp = transform_msg.getTimestamp()
+                            raw_timestamp = transform_msg.getTimestampDevice()
                             transform_timestamp = raw_timestamp.total_seconds()
                             self.main_logger.debug(
-                                f"SLAM transform | raw: {raw_timestamp} | seconds: {transform_timestamp} | quat: {quat} | trans: {trans}"
+                                f"SLAM transform | raw: {raw_timestamp} | seconds: {transform_timestamp} | quat: {quat} | trans (m): ({trans_mm.x / 1000.0}, {-trans_mm.y / 1000.0}, {-trans_mm.z / 1000.0})"
                             )
 
                         obstacle_msg = _drain_latest(qObstaclePCL)
@@ -143,7 +142,7 @@ class OakD(AbstractCamera):
                         if detectionMsg and isinstance(
                             detectionMsg, dai.SpatialImgDetections
                         ):
-                            if transform_timestamp is None or quat is None or trans is None:
+                            if transform_timestamp is None or quat is None or trans_mm is None:
                                 self.main_logger.debug(
                                     f"SLAM not ready, logging {len(detectionMsg.detections)} raw detections"
                                 )
@@ -167,7 +166,7 @@ class OakD(AbstractCamera):
                                 continue
 
                             detections_timestamp = (
-                                detectionMsg.getTimestamp().total_seconds()
+                                detectionMsg.getTimestampDevice().total_seconds()
                             )
 
                             self.main_logger.debug(
@@ -196,7 +195,11 @@ class OakD(AbstractCamera):
                                 origin_cam_q = Quaternion(
                                     quat.qw, quat.qx, -quat.qy, -quat.qz
                                 )
-                                origin_cam_coord = Coordinate(trans.x, -trans.y, -trans.z)
+                                origin_cam_coord = Coordinate(
+                                    trans_mm.x / 1000.0,
+                                    -trans_mm.y / 1000.0,
+                                    -trans_mm.z / 1000.0,
+                                )
 
                                 translated_coordinate = (
                                     FRD_conversion.convert_target_to_FRD(

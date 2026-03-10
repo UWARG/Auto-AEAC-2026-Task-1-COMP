@@ -212,8 +212,9 @@ class OakD(AbstractCamera):
                                 self.detailed_detections_logger.info(
                                     f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
                                 )
-                                self.main_logger.debug(
-                                    f"Logged detection with SLAM pose | timestamp: {detections_timestamp}, transform timestamp: {transform_timestamp}"
+                                self.main_logger.info(
+                                    f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
+                                    f" | SLAM transform timestamp: {transform_timestamp} | Detection timestamp: {detections_timestamp}"
                                 )
                     except Exception as e:
                         self.main_logger.error(

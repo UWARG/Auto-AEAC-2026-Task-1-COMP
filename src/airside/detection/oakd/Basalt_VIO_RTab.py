@@ -33,6 +33,7 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None)
         imu.setMaxBatchReports(10)
 
         stereo.setExtendedDisparity(True)
+        stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
         stereo.syncedLeft.link(odom.left)
         stereo.syncedRight.link(odom.right)

@@ -118,7 +118,8 @@ class OakD(AbstractCamera):
                         transform_msg = qSlamTransform.tryGet()
                         if isinstance(transform_msg, dai.TransformData):
                             quat = transform_msg.getQuaternion()
-                            trans = transform_msg.getTranslation()
+                            trans_mm = transform_msg.getTranslation()
+                            trans = dai.Point3d(trans_mm.x / 1000.0, trans_mm.y / 1000.0, trans_mm.z / 1000.0)
                             raw_timestamp = transform_msg.getTimestamp()
                             transform_timestamp = raw_timestamp.total_seconds()
                             self.main_logger.debug(

@@ -118,11 +118,11 @@ class OakD(AbstractCamera):
                     if isinstance(transform_msg, dai.TransformData):
                         quat = transform_msg.getQuaternion()
                         trans = transform_msg.getTranslation()
-                        transform_timestamp = (
-                            transform_msg.getTimestamp().total_seconds()
+                        raw_timestamp = transform_msg.getTimestamp()
+                        transform_timestamp = raw_timestamp.total_seconds()
+                        self.main_logger.debug(
+                            f"SLAM transform | raw: {raw_timestamp} | seconds: {transform_timestamp} | quat: {quat} | trans: {trans}"
                         )
-                        print(f"Got SLAM transform | timestamp: {transform_msg.getTimestamp()}")
-                        print(f"Got: {quat}, {trans}, {transform_timestamp}")
 
                     obstacle_msg = _drain_latest(qObstaclePCL)
                     if obstacle_msg is not None:
@@ -164,6 +164,10 @@ class OakD(AbstractCamera):
 
                         detections_timestamp = (
                             detectionMsg.getTimestamp().total_seconds()
+                        )
+
+                        self.main_logger.debug(
+                            f"Timestamp comparison | detection: {detections_timestamp:.6f}s | transform: {transform_timestamp:.6f}s | diff: {abs(detections_timestamp - transform_timestamp):.6f}s"
                         )
 
                         if (

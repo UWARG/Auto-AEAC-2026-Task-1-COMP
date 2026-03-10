@@ -1,61 +1,69 @@
+#!/usr/bin/env python3
+
 import depthai as dai
 import time
 
+# ----------------------------
+# Pipeline
+# ----------------------------
 
 pipeline = dai.Pipeline()
 
+# ----------------------------
+# Cameras (Software v3 API)
+# ----------------------------
 
-colorCam = pipeline.create(dai.node.ColorCamera)
-left = pipeline.create(dai.node.MonoCamera)
-right = pipeline.create(dai.node.MonoCamera)
+# RGB
+rgb = pipeline.create(dai.node.Camera).build()
+rgbPreview = rgb.requestOutput((640, 640), type=dai.ImgFrame.Type.RGB888p)
 
-colorCam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
-colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-colorCam.setPreviewSize(640, 640)
-colorCam.setInterleaved(False)
-
+# Left mono
+left = pipeline.create(dai.node.Camera).build()
 left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+leftOut = left.requestOutput((640, 400), type=dai.ImgFrame.Type.GRAY8)
+
+# Right mono
+right = pipeline.create(dai.node.Camera).build()
 right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
+rightOut = right.requestOutput((640, 400), type=dai.ImgFrame.Type.GRAY8)
 
-left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-
+# ----------------------------
+# Stereo Depth
+# ----------------------------
 
 stereo = pipeline.create(dai.node.StereoDepth)
-stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
-left.out.link(stereo.left)
-right.out.link(stereo.right)
+leftOut.link(stereo.left)
+rightOut.link(stereo.right)
 
+depthOut = stereo.depth.createOutputQueue(maxSize=1, blocking=False)
 
-spatialDetection = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
+# ----------------------------
+# Spatial Detection Network
+# ----------------------------
 
-spatialDetection.setBlobPath(
-    dai.OpenVINO.Blob(
-        dai.OpenVINO.Version.VERSION_2021_4,
-        dai.NNModelDescription(
-            "depthai/yolov6-nano"
-        )
-    )
-)
+spatialNN = pipeline.create(dai.node.SpatialDetectionNetwork)
 
-spatialDetection.setConfidenceThreshold(0.5)
-spatialDetection.setNumClasses(80)
-spatialDetection.setCoordinateSize(4)
-spatialDetection.setAnchors([])
-spatialDetection.setAnchorMasks({})
-spatialDetection.setIouThreshold(0.5)
+spatialNN.setModel(dai.NNModelDescription("yolov6-nano"))
+spatialNN.setConfidenceThreshold(0.5)
 
-colorCam.preview.link(spatialDetection.input)
-stereo.depth.link(spatialDetection.inputDepth)
+rgbPreview.link(spatialNN.input)
+stereo.depth.link(spatialNN.inputDepth)
 
+detectionsQueue = spatialNN.out.createOutputQueue(maxSize=1, blocking=False)
+
+# ----------------------------
+# IMU
+# ----------------------------
 
 imu = pipeline.create(dai.node.IMU)
+
 imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 400)
 imu.enableIMUSensor(dai.IMUSensor.GYROSCOPE_RAW, 400)
-imu.setBatchReportThreshold(1)
-imu.setMaxBatchReports(10)
 
+# ----------------------------
+# VIO
+# ----------------------------
 
 vio = pipeline.create(dai.node.Vio)
 
@@ -63,57 +71,47 @@ stereo.rectifiedLeft.link(vio.left)
 stereo.rectifiedRight.link(vio.right)
 imu.out.link(vio.imu)
 
+vioQueue = vio.out.createOutputQueue(maxSize=1, blocking=False)
 
-xoutDet = pipeline.create(dai.node.XLinkOut)
-xoutDet.setStreamName("detections")
+# ----------------------------
+# Start Pipeline
+# ----------------------------
 
-xoutVio = pipeline.create(dai.node.XLinkOut)
-xoutVio.setStreamName("vio")
+pipeline.start()
 
-spatialDetection.out.link(xoutDet.input)
-vio.out.link(xoutVio.input)
+print("Pipeline started")
 
+# ----------------------------
+# Main loop
+# ----------------------------
 
-with dai.Device(pipeline) as device:
+while pipeline.isRunning():
 
-    detQueue = device.getOutputQueue("detections", maxSize=1, blocking=False)
-    vioQueue = device.getOutputQueue("vio", maxSize=1, blocking=False)
+    # -----------------------
+    # Spatial detections
+    # -----------------------
+    det = detectionsQueue.tryGet()
 
-    print("Pipeline started")
-
-    while True:
-
-        
-        det = detQueue.tryGet()
-
-        if det is not None:
-            detections = det.detections
-            print("\nDetections:")
-
-            for d in detections:
-                print(
-                    f"Label: {d.label} "
-                    f"Conf: {d.confidence:.2f} "
-                    f"XYZ: ({d.spatialCoordinates.x:.1f}, "
-                    f"{d.spatialCoordinates.y:.1f}, "
-                    f"{d.spatialCoordinates.z:.1f}) mm"
-                )
-
-        
-        vioData = vioQueue.tryGet()
-
-        if vioData is not None:
-            pose = vioData.pose
-
-            pos = pose.position
-            rot = pose.rotation
-
-            print("\nVIO Pose:")
+    if det is not None:
+        for d in det.detections:
+            xyz = d.spatialCoordinates
             print(
-                f"Position: ({pos.x:.3f}, {pos.y:.3f}, {pos.z:.3f}) m"
-            )
-            print(
-                f"Quaternion: ({rot.i:.3f}, {rot.j:.3f}, {rot.k:.3f}, {rot.real:.3f})"
+                f"DET label={d.label} conf={d.confidence:.2f} "
+                f"x={xyz.x:.0f} y={xyz.y:.0f} z={xyz.z:.0f} mm"
             )
 
-        time.sleep(0.01)
+    # -----------------------
+    # VIO pose
+    # -----------------------
+    vioData = vioQueue.tryGet()
+
+    if vioData is not None:
+        p = vioData.pose.position
+        q = vioData.pose.rotation
+
+        print(
+            f"VIO pos=({p.x:.3f},{p.y:.3f},{p.z:.3f}) "
+            f"quat=({q.i:.3f},{q.j:.3f},{q.k:.3f},{q.real:.3f})"
+        )
+
+    time.sleep(0.005)

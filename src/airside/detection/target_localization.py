@@ -29,7 +29,7 @@ def get_target_coordinates(
     roll_threshold: float,
 ) -> list[Coordinate]:
     """
-    Calculates target positions in NED coordinates using downwards camera detections,
+    Calculates target positions in FRD coordinates using downwards camera detections,
     range finder reading and attitude
     Parameters:
         detections_: List of bounding boxes from target detections
@@ -37,7 +37,7 @@ def get_target_coordinates(
         dist_reading: range finder reading (meters)
         roll_threshold: maximum roll of the drone where detections are still accepted (degrees)
     Returns:
-        - List of Coordinate objects corresponding to detections (NED)
+        - List of Coordinate objects corresponding to detections (FRD)
     """
     # Check conditions to run script
     if abs(roll) > roll_threshold:  # roll is beyond threshold
@@ -56,11 +56,11 @@ def get_target_coordinates(
 
     height = dist_reading * math.cos(abs(roll_rad))
 
-    # body to ned
+    # body to frd
     cr, sr = math.cos(roll_rad), math.sin(roll_rad)
     cp, sp = math.cos(pitch_rad), math.sin(pitch_rad)
     cy, sy = math.cos(yaw_rad), math.sin(yaw_rad)
-    R_body_to_ned = np.array(
+    R_body_to_frd = np.array(
         [
             [cp * cy, cp * sy, -sp],
             [sr * sp * cy - cr * sy, sr * sp * sy + cr * cy, sr * cp],
@@ -79,16 +79,15 @@ def get_target_coordinates(
             @ np.array([float(kp.x), float(kp.y), 1], dtype=np.float32).T
         )
 
-        # rotate camera --> body --> ned
-        Q_ned = R_body_to_ned @ R_cam_to_body @ Q_cam.T
-        # Q_ned = R_cam_to_body @ Q_cam.T
+        # rotate camera --> body --> frd
+        Q_frd = R_body_to_frd @ R_cam_to_body @ Q_cam.T
 
         # scale based on altitude reading
-        P_ned = (Q_ned * height) / Q_ned[2]
+        P_frd = (Q_frd * height) / Q_frd[2]
 
         # add point to output
-        coord_ned = Coordinate(x=P_ned[0], y=P_ned[1], z=P_ned[2])
+        coord_frd = Coordinate(x=P_frd[0], y=P_frd[1], z=P_frd[2])
 
-        output.append(coord_ned)
+        output.append(coord_frd)
 
     return output

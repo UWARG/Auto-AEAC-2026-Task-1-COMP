@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from util import Coordinate, ImageLocation
+from util import Coordinate, ImageLocation, Vector3d
 
 CAMERA_RESOLUTION = (2304.0, 1296.0)
 CAMERA_RESOLUTION_CALIB = (640.0, 480.0)
@@ -27,6 +27,7 @@ def get_target_coordinates(
     yaw: float,
     dist_reading: float,
     roll_threshold: float,
+    origin_translation: Vector3d,
 ) -> list[Coordinate]:
     """
     Calculates target positions in FRD coordinates using downwards camera detections,
@@ -36,8 +37,9 @@ def get_target_coordinates(
         roll, pitch and yaw: euler angles of drone (degrees)
         dist_reading: range finder reading (meters)
         roll_threshold: maximum roll of the drone where detections are still accepted (degrees)
+        origin_translation: vector represeting local position of the drone (m)
     Returns:
-        - List of Coordinate objects corresponding to detections (FRD)
+        - List of Coordinate objects corresponding to local positions of detections (FRD)
     """
     # Check conditions to run script
     if abs(roll) > roll_threshold:  # roll is beyond threshold
@@ -85,9 +87,13 @@ def get_target_coordinates(
         # scale based on altitude reading
         P_frd = (Q_frd * height) / Q_frd[2]
 
+        # calculate local position of target
+        local_coord_frd = Coordinate(
+            P_frd[0] + origin_translation.x,
+            P_frd[1] + origin_translation.y,
+            P_frd[2] + origin_translation.z,
+        )
         # add point to output
-        coord_frd = Coordinate(x=P_frd[0], y=P_frd[1], z=P_frd[2])
-
-        output.append(coord_frd)
+        output.append(local_coord_frd)
 
     return output

@@ -124,7 +124,7 @@ class OakD(AbstractCamera):
 
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
-                    print(f"Got detection message: {detectionMsg}")
+                    print(f"Got detection message: {detectionMsg.__class__}")
                     if detectionMsg and isinstance(
                         detectionMsg, dai.SpatialImgDetections
                     ):

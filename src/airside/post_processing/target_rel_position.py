@@ -231,19 +231,7 @@ def locate_targets(
                     vector = np.subtract(target_vector, bottom_corners[0])
                     wall = walls["close_x_wall"]
                     position = (abs(vector[1]), abs(vector[0]))
-                # for slight imperfections within margin of error
-                elif (
-                    abs(
-                        target.location.x
-                        - walls["close_x_wall"].offset / walls["close_x_wall"].normal.x
-                    )
-                    < MARGIN
-                    or abs(
-                        target.location.x
-                        - walls["far_x_wall"].offset / walls["far_x_wall"].normal.x
-                    )
-                    < MARGIN
-                ):
+                else:
                     vector = np.subtract(target_vector, bottom_corners[0])
                     vector2 = np.subtract(target_vector, bottom_corners[2])
                     if np.linalg.norm(vector) < np.linalg.norm(vector2):
@@ -254,9 +242,6 @@ def locate_targets(
                         # change to position = (abs(vector2[1]), -abs(vector2[0]))if you want a negative value for position's forward value
                         position = (abs(vector2[1]), 0)
                         wall = walls["far_x_wall"]
-
-                else:  # otherwise invalid
-                    raise Exception(f"Invalid target location {target.location}")
 
             index = direction.index(first_direction.value)
             index2 = list(walls.values()).index(wall)

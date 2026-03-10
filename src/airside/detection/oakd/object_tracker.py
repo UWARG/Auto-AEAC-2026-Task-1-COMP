@@ -15,7 +15,7 @@ def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None
     depthNode.setOutputSize(640, 400)
     depthNode.setLeftRightCheck(True)
     depthNode.setSubpixel(True)
-    depthNode.enableDistortionCorrection(True)
+    depthNode.enableDistortionCorrection(False)
     depthNode.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
     spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(

@@ -124,10 +124,10 @@ class OakD(AbstractCamera):
 
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
-                    print(f"Got detection message: {detectionMsg.__class__}")
                     if detectionMsg and isinstance(
                         detectionMsg, dai.SpatialImgDetections
                     ):
+                        print("hi")
                         if transform_timestamp is None or quat is None or trans is None:
                             self.main_logger.debug(
                                 f"SLAM not ready, logging {len(detectionMsg.detections)} raw detections"

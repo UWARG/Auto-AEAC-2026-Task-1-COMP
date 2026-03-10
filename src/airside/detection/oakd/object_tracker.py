@@ -5,13 +5,19 @@ import depthai as dai
 from airside.detection.oakd.camera_bundle import CameraBundle
 
 
-def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None):
+def add_object_tracker(
+    p: dai.Pipeline,
+    cameras: Optional["CameraBundle"] = None,
+    use_default_model: bool = True,
+    custom_model_name: str = "yolov6-nano",
+):
     cameras = cameras or CameraBundle(p)
     depthNode = cameras.stereo
     depthNode.setExtendedDisparity(True)
 
+    model_name = "mobilenet-ssd" if use_default_model else custom_model_name
     spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb, depthNode, dai.NNModelDescription("yolov6-nano")
+        cameras.camRgb, depthNode, dai.NNModelDescription(model_name)
     )
 
     spatialDetectionNetwork.setConfidenceThreshold(0.6)

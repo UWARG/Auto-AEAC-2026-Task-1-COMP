@@ -113,6 +113,7 @@ class OakD(AbstractCamera):
             try:
                 while not self.stop_event.is_set():
                     time.sleep(0.01)
+                    print("Looping...")
 
                     transform_msg = qSlamTransform.tryGet()
                     if isinstance(transform_msg, dai.TransformData):

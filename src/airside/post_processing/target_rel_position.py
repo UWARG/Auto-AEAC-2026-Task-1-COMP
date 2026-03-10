@@ -54,33 +54,23 @@ def locate_targets(
 
     # TODO: TEMPORARY DEFAULT if any walls are missing
     if walls["close_x_wall"] is None:
-        walls["close_x_wall"] = Plane(
-            normal=Vector3d(1, 0, 0),
-            offset=3.0
-        )
+        walls["close_x_wall"] = Plane(normal=Vector3d(1, 0, 0), offset=3.0)
         print("Warning: close_x_wall not detected, using default wall at x=3.0m")
     if walls["far_x_wall"] is None:
-        walls["far_x_wall"] = Plane(
-            normal=Vector3d(1, 0, 0),
-            offset=6.0
-        )
+        walls["far_x_wall"] = Plane(normal=Vector3d(1, 0, 0), offset=6.0)
         print("Warning: far_x_wall not detected, using default wall at x=6.0m")
     if walls["negative_y_wall"] is None:
-        walls["negative_y_wall"] = Plane(
-            normal=Vector3d(0, -1, 0),
-            offset=3.0
-        )
+        walls["negative_y_wall"] = Plane(normal=Vector3d(0, -1, 0), offset=3.0)
         print("Warning: negative_y_wall not detected, using default wall at y=-3.0m")
     if walls["positive_y_wall"] is None:
-        walls["positive_y_wall"] = Plane(
-            normal=Vector3d(0, 1, 0),
-            offset=3.0
-        )
+        walls["positive_y_wall"] = Plane(normal=Vector3d(0, 1, 0), offset=3.0)
         print("Warning: positive_y_wall not detected, using default wall at y=3.0m")
     if ground_vector is None:
         ground_vector = np.array([0, 0, 1])
         ground_offset = 1.0
-        print("Warning: ground plane not detected, using default horizontal ground plane at z=1.0m")
+        print(
+            "Warning: ground plane not detected, using default horizontal ground plane at z=1.0m"
+        )
 
     close_wall = np.array(
         [
@@ -240,12 +230,10 @@ def locate_targets(
                     vector = np.subtract(target_vector, bottom_corners[0])
                     vector2 = np.subtract(target_vector, bottom_corners[2])
                     if np.linalg.norm(vector) < np.linalg.norm(vector2):
-                        # change to position = (abs(vector[1]), -abs(vector[0])) if you want a negative value for position's forward value
-                        position = (abs(vector[1]), 0)
+                        position = (abs(vector[1]), abs(vector[0]))
                         wall = walls["close_x_wall"]
                     else:
-                        # change to position = (abs(vector2[1]), -abs(vector2[0]))if you want a negative value for position's forward value
-                        position = (abs(vector2[1]), 0)
+                        position = (abs(vector2[1]), abs(vector2[0]))
                         wall = walls["far_x_wall"]
 
             index = direction.index(first_direction.value)

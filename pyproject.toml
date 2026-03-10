@@ -3,12 +3,12 @@ name = "auto-aeac-2026-task-1-comp"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "black==24.2.0",
     "depthai>=3.3.0",
     "numpy>=2.4.2",
-    "open3d>=0.19",
+    "open3d==0.18",
     "opencv-python>=4.13.0.92",
     "pymavlink>=2.4.49",
     "pyserial>=3.5",

@@ -116,12 +116,12 @@ class OakD(AbstractCamera):
 
                     transform_msg = qSlamTransform.tryGet()
                     if isinstance(transform_msg, dai.TransformData):
-                        print("here silly")
                         quat = transform_msg.getQuaternion()
                         trans = transform_msg.getTranslation()
                         transform_timestamp = (
                             transform_msg.getTimestamp().total_seconds()
                         )
+                        print(f"Got: {quat}, {trans}, {transform_timestamp}")
 
                     obstacle_msg = _drain_latest(qObstaclePCL)
                     if obstacle_msg is not None:

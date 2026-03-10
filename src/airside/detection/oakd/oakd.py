@@ -1,6 +1,7 @@
 import threading
 import logging
 from typing import Any
+from pathlib import Path
 
 from airside.detection import FRD_conversion
 from airside.detection.oakd.camera_bundle import CameraBundle
@@ -46,6 +47,12 @@ class OakD(AbstractCamera):
         self.ground_pcl_path = ground_pcl_path
 
     def run(self):
+        output_folder = Path(__file__).parent.parent.parent.parent.parent / "outputs"
+        db_path = output_folder / "building.db"
+        if db_path.exists():
+            self.main_logger.info(f"Removing old RTAB-Map database: {db_path}")
+            db_path.unlink()
+        
         def _save_pcl(points: np.ndarray | None, output_path: str) -> None:
             cloud = o3d.geometry.PointCloud()
 

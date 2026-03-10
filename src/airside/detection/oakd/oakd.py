@@ -1,5 +1,6 @@
 import threading
 import logging
+from typing import Any
 
 from airside.detection import FRD_conversion
 from airside.detection.oakd.camera_bundle import CameraBundle
@@ -62,6 +63,15 @@ class OakD(AbstractCamera):
                 return np.asarray(points, dtype=np.float64)
             return None
 
+        def _drain_latest(queue: Any) -> object | None:
+            latest_msg: object | None = None
+            while True:
+                msg = queue.tryGet()
+                if msg is None:
+                    break
+                latest_msg = msg
+            return latest_msg
+
         with dai.Pipeline() as pipeline:
             cameraBundle = CameraBundle(pipeline)
             qDetections = add_object_tracker(pipeline, cameraBundle)
@@ -85,6 +95,8 @@ class OakD(AbstractCamera):
             transform_timestamp: float | None = None
             quat: dai.Quaterniond | None = None
             trans: dai.Point3d | None = None
+            obstacle_points: np.ndarray | None = None
+            ground_points: np.ndarray | None = None
 
             try:
                 while not self.stop_event.is_set():
@@ -97,6 +109,18 @@ class OakD(AbstractCamera):
                         transform_timestamp = (
                             transform_msg.getTimestamp().total_seconds()
                         )
+
+                    obstacle_msg = _drain_latest(qObstaclePCL)
+                    if obstacle_msg is not None:
+                        latest_obstacle_points = _extract_points(obstacle_msg)
+                        if latest_obstacle_points is not None:
+                            obstacle_points = latest_obstacle_points
+
+                    ground_msg = _drain_latest(qGroundPCL)
+                    if ground_msg is not None:
+                        latest_ground_points = _extract_points(ground_msg)
+                        if latest_ground_points is not None:
+                            ground_points = latest_ground_points
 
                     # Get tracker outputs
                     detectionMsg = qDetections.tryGet()
@@ -155,27 +179,31 @@ class OakD(AbstractCamera):
                                 f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
                             )
             finally:
+                final_obstacle_msg = _drain_latest(qObstaclePCL)
+                if final_obstacle_msg is not None:
+                    final_obstacle_points = _extract_points(final_obstacle_msg)
+                    if final_obstacle_points is not None:
+                        obstacle_points = final_obstacle_points
+
+                final_ground_msg = _drain_latest(qGroundPCL)
+                if final_ground_msg is not None:
+                    final_ground_points = _extract_points(final_ground_msg)
+                    if final_ground_points is not None:
+                        ground_points = final_ground_points
+
                 slam.saveDatabase()
-
-                obstacle_points: np.ndarray | None = None
-                ground_points: np.ndarray | None = None
-
-                obstacle_msg = qObstaclePCL.tryGet()
-                if obstacle_msg is not None:
-                    obstacle_points = _extract_points(obstacle_msg)
-                    if obstacle_points is not None:
-                        obstacle_points = obstacle_points
-
-                ground_msg = qGroundPCL.tryGet()
-                if ground_msg is not None:
-                    ground_points = _extract_points(ground_msg)
-                    if ground_points is not None:
-                        ground_points = ground_points
 
                 _save_pcl(
                     obstacle_points,
                     self.obstacle_pcl_path,
                 )
                 _save_pcl(ground_points, self.ground_pcl_path)
+
+                obstacle_count = 0 if obstacle_points is None else len(obstacle_points)
+                ground_count = 0 if ground_points is None else len(ground_points)
+                self.main_logger.info(
+                    f"Saved SLAM point clouds | obstacle={obstacle_count} points, ground={ground_count} points"
+                )
+
                 pipeline.stop()
         self.main_logger.info("Stopping OakD thread.")

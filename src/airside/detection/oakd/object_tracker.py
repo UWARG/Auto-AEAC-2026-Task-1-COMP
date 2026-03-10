@@ -12,7 +12,7 @@ def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None
     depthNode.setExtendedDisparity(True)
 
     spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb, depthNode, dai.NNArchive(Path("detection/oakd/tuned11n30-07-2025.rvc2.tar.xz").resolve())
+        cameras.camRgb, depthNode, dai.NNArchive(Path("detection/oakd/trained-on-small-dataset.rvc2.tar.xz").resolve())
     )
 
     spatialDetectionNetwork.input.setBlocking(False)

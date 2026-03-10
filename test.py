@@ -1,108 +1,139 @@
 #!/usr/bin/env python3
 
-import depthai as dai
 import time
+import depthai as dai
 
-pipeline = dai.Pipeline()
+NEURAL_FPS = 8
+STEREO_DEFAULT_FPS = 20
 
-# --------------------------------------------------
-# Cameras (Software v3)
-# --------------------------------------------------
+fps = STEREO_DEFAULT_FPS
+size = (640, 400)
 
-# RGB camera
-rgbCam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-rgbPreview = rgbCam.requestOutput((640, 640), type=dai.ImgFrame.Type.RGB888p)
+modelDescription = dai.NNModelDescription("yolov6-nano")
 
-# Left mono
-leftCam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-leftOut = leftCam.requestOutput((640, 400), type=dai.ImgFrame.Type.GRAY8)
+with dai.Pipeline() as p:
 
-# Right mono
-rightCam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
-rightOut = rightCam.requestOutput((640, 400), type=dai.ImgFrame.Type.GRAY8)
+    # -----------------------------
+    # Cameras
+    # -----------------------------
 
-# --------------------------------------------------
-# Stereo Depth
-# --------------------------------------------------
+    camRgb = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A, sensorFps=fps)
+    monoLeft = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B, sensorFps=fps)
+    monoRight = p.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C, sensorFps=fps)
 
-stereo = pipeline.create(dai.node.StereoDepth)
+    # -----------------------------
+    # Stereo depth
+    # -----------------------------
 
-leftOut.link(stereo.left)
-rightOut.link(stereo.right)
+    stereo = p.create(dai.node.StereoDepth)
 
-# --------------------------------------------------
-# Spatial Detection
-# --------------------------------------------------
+    stereo.setExtendedDisparity(True)
 
-spatialNN = pipeline.create(dai.node.SpatialDetectionNetwork)
+    monoLeft.requestOutput(size).link(stereo.left)
+    monoRight.requestOutput(size).link(stereo.right)
 
-spatialNN.setModel(dai.NNModelDescription("yolov6-nano"))
-spatialNN.setConfidenceThreshold(0.5)
+    # -----------------------------
+    # Spatial detection
+    # -----------------------------
 
-rgbPreview.link(spatialNN.input)
-stereo.depth.link(spatialNN.inputDepth)
+    spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
+        camRgb,
+        stereo,
+        modelDescription,
+    )
 
-detectionsQueue = spatialNN.out.createOutputQueue(
-    maxSize=1,
-    blocking=False
-)
+    spatialDetectionNetwork.input.setBlocking(False)
+    spatialDetectionNetwork.setDepthLowerThreshold(100)
+    spatialDetectionNetwork.setDepthUpperThreshold(5000)
 
-# --------------------------------------------------
-# IMU
-# --------------------------------------------------
+    # -----------------------------
+    # IMU
+    # -----------------------------
 
-imu = pipeline.create(dai.node.IMU)
+    imu = p.create(dai.node.IMU)
 
-imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 400)
-imu.enableIMUSensor(dai.IMUSensor.GYROSCOPE_RAW, 400)
+    imu.enableIMUSensor(
+        [dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW],
+        200,
+    )
 
-# --------------------------------------------------
-# VIO
-# --------------------------------------------------
+    imu.setBatchReportThreshold(1)
+    imu.setMaxBatchReports(10)
 
-vio = pipeline.create(dai.node.Vio)
+    # -----------------------------
+    # VIO / SLAM
+    # -----------------------------
 
-stereo.rectifiedLeft.link(vio.left)
-stereo.rectifiedRight.link(vio.right)
-imu.out.link(vio.imu)
+    odom = p.create(dai.node.BasaltVIO)
+    slam = p.create(dai.node.RTABMapSLAM)
 
-vioQueue = vio.out.createOutputQueue(
-    maxSize=1,
-    blocking=False
-)
+    params = {
+        "RGBD/CreateOccupancyGrid": "true",
+        "Grid/3D": "true",
+        "Rtabmap/SaveWMState": "true",
+    }
 
-# --------------------------------------------------
-# Start pipeline
-# --------------------------------------------------
+    slam.setParams(params)
 
-pipeline.start()
+    stereo.syncedLeft.link(odom.left)
+    stereo.syncedRight.link(odom.right)
+    imu.out.link(odom.imu)
 
-print("Pipeline running")
+    stereo.depth.link(slam.depth)
+    stereo.rectifiedLeft.link(slam.rect)
+    odom.transform.link(slam.odom)
 
-# --------------------------------------------------
-# Main loop
-# --------------------------------------------------
+    # -----------------------------
+    # Output queues
+    # -----------------------------
 
-while pipeline.isRunning():
+    detQ = spatialDetectionNetwork.out.createOutputQueue(maxSize=1, blocking=False)
+    slamQ = slam.transform.createOutputQueue(maxSize=1, blocking=False)
 
-    det = detectionsQueue.tryGet()
-    if det:
-        for d in det.detections:
-            xyz = d.spatialCoordinates
+    print("Starting pipeline")
+
+    p.start()
+
+    while p.isRunning():
+
+        # -----------------------------
+        # Detections
+        # -----------------------------
+
+        det = detQ.tryGet()
+
+        if det is not None:
+            print("\nDetections:")
+
+            for detection in det.detections:
+
+                coords = detection.spatialCoordinates
+
+                print(
+                    f"label={detection.labelName} "
+                    f"conf={detection.confidence:.2f} "
+                    f"x={int(coords.x)}mm "
+                    f"y={int(coords.y)}mm "
+                    f"z={int(coords.z)}mm"
+                )
+
+        # -----------------------------
+        # SLAM pose
+        # -----------------------------
+
+        slamData = slamQ.tryGet()
+
+        if slamData is not None:
+
+            pose = slamData.pose
+            pos = pose.position
+            rot = pose.orientation
+
+            print("\nSLAM Pose:")
+
             print(
-                f"DET label={d.label} "
-                f"conf={d.confidence:.2f} "
-                f"x={xyz.x:.0f} y={xyz.y:.0f} z={xyz.z:.0f} mm"
+                f"pos=({pos.x:.3f}, {pos.y:.3f}, {pos.z:.3f}) "
+                f"quat=({rot.x:.3f}, {rot.y:.3f}, {rot.z:.3f}, {rot.w:.3f})"
             )
 
-    vioData = vioQueue.tryGet()
-    if vioData:
-        pos = vioData.pose.position
-        rot = vioData.pose.rotation
-
-        print(
-            f"VIO pos=({pos.x:.3f},{pos.y:.3f},{pos.z:.3f}) "
-            f"quat=({rot.i:.3f},{rot.j:.3f},{rot.k:.3f},{rot.real:.3f})"
-        )
-
-    time.sleep(0.005)
+        time.sleep(0.01)

@@ -161,6 +161,8 @@ class OakD(AbstractCamera):
                                     self.main_logger.info(
                                         f"Result (no SLAM): {mapped_target}"
                                     )
+                                    for handler in self.main_logger.handlers:
+                                        handler.flush()
                                 continue
 
                             detections_timestamp = (
@@ -209,17 +211,27 @@ class OakD(AbstractCamera):
                                 )
 
                                 self.detections_logger.info(mapped_target)
+                                for handler in self.detections_logger.handlers:
+                                    handler.flush()
+                                
                                 self.detailed_detections_logger.info(
                                     f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
                                 )
+                                for handler in self.detailed_detections_logger.handlers:
+                                    handler.flush()
+                                
                                 self.main_logger.info(
                                     f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
                                     f" | SLAM transform timestamp: {transform_timestamp} | Detection timestamp: {detections_timestamp}"
                                 )
+                                for handler in self.main_logger.handlers:
+                                    handler.flush()
                     except Exception as e:
                         self.main_logger.error(
                             f"Error in detection loop: {e}", exc_info=True
                         )
+                        for handler in self.main_logger.handlers:
+                            handler.flush()
                         # Continue running despite errors
                         continue
             finally:
@@ -248,6 +260,10 @@ class OakD(AbstractCamera):
                 self.main_logger.info(
                     f"Saved SLAM point clouds | obstacle={obstacle_count} points, ground={ground_count} points"
                 )
+                for handler in self.main_logger.handlers:
+                    handler.flush()
 
                 pipeline.stop()
         self.main_logger.info("Stopping OakD thread.")
+        for handler in self.main_logger.handlers:
+            handler.flush()

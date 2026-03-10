@@ -51,7 +51,7 @@ def main(starting_time: str) -> None:
     detections_logger.setLevel(logging.INFO)
     detections_logger.propagate = False
     detections_handler_file = logging.FileHandler(
-        str(output_folder / f"targets_{starting_time}.txt")
+        str(output_folder / f"targets_{starting_time}.txt"), encoding="utf-8"
     )
     detections_handler_file.setFormatter(detections_formatter)
     detections_logger.addHandler(detections_handler_file)
@@ -60,7 +60,7 @@ def main(starting_time: str) -> None:
     detailed_detections_logger.setLevel(logging.INFO)
     detailed_detections_logger.propagate = False
     detailed_detections_handler_file = logging.FileHandler(
-        str(output_folder / f"detailed_targets_{starting_time}.txt")
+        str(output_folder / f"detailed_targets_{starting_time}.txt"), encoding="utf-8"
     )
     detailed_detections_handler_file.setFormatter(detections_formatter)
     detailed_detections_logger.addHandler(detailed_detections_handler_file)
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     logs_folder = Path("logs")
     logs_folder.mkdir(exist_ok=True, parents=True)
     main_logger_handler_file = logging.FileHandler(
-        str(logs_folder / f"airside_{starting_time}.log")
+        str(logs_folder / f"airside_{starting_time}.log"), encoding="utf-8"
     )
     main_logger_handler_file.setFormatter(main_formatter)
     main_logger.addHandler(main_logger_handler_file)

@@ -1,6 +1,8 @@
 import threading
 import logging
 import time
+from typing import List
+
 
 from .abstract_camera import AbstractCamera
 from util import (
@@ -8,7 +10,6 @@ from util import (
     Coordinate,
     Target,
     GPSCoord,
-    ConfigOpenCV,
     CameraOption,
     create_camera,
     ConfigPiCamera2,
@@ -41,13 +42,14 @@ class Arducam(AbstractCamera):
             main_logger, detections_logger, detailed_detections_logger, stop_event
         )
 
-        while not self.__initialize_camera():
+        while not self._initialize_camera():
             main_logger.error(f"Failed to initialize camera, retrying in 1 second...")
             time.sleep(1)
 
     def run(self):
         while not self.stop_event.is_set():
             time.sleep(1)
+            
             # TODO: Add arducam detection code
             target = Target(
                 colour=Colours.RED,
@@ -90,49 +92,20 @@ class Arducam(AbstractCamera):
         Capture a single frame from the camera.
         """
         # OAK-D uses its own pipeline, not BaseCameraDevice
-        if self.mode == "oakd":
-            if self._oakd_queue is None:
-                self.main_logger.warning("OAK-D queue not initialized")
-                return None
-            frame_msg = None
-            if self._oakd_current_frame is None:
-                self._oakd_current_frame = self._oakd_queue.get()
-            else:
-                newframe = self._oakd_queue.tryGet()
-                if newframe is not None:
-                    self._oakd_current_frame = newframe
-            return self._oakd_current_frame.getCvFrame()
-
-        elif self._camera is not None:
-            # Update simulation camera position from MAVLink
-            if self.mode == "sim":
-
-                if self._mav_comm is None:
-                    self.main_logger.error("MavlinkComm instance required for sim mode")
-                    return None
-
-                # Get current position and heading from MAVLink
-                position = self._mav_comm.get_position()
-                heading = self._mav_comm.get_heading()
-
-                # Convert util.Coordinate to simulator.GPSCoord
-                gps_coord = GPSCoord(
-                    lat=position.lat, lon=position.lon, alt=position.alt
-                )
-
-                # Update simulation camera with current position
-                self._camera.update_position(gps_coord, heading)
-
-            status, frame = self._camera.run()
-            if not status:
-                self.main_logger.warning(
-                    "Failed frame capture due to camera implementation or timeout"
-                )
-            return frame
-        self.main_logger.warning(
-            "Attempted to capture frame with initialized camera device"
-        )
-        return None
+        if self.mode == "rpi": 
+            if self._camera is None: 
+                self.main_logger.warning("Camera is None during frame capture.")
+                return None 
+            try: 
+                frame = self._camera.capture_array() 
+                return frame
+            except RuntimeError as e:  
+                self.main_logger.warning("Failed to capture frame from rpi camera")
+                return None 
+            except Exception as e: 
+                self.main_logger.error(f"Exception during frame capture: {e}")
+                return None 
+            
 
     def __enter__(self) -> "Camera":
         """Context manager entry - allows use with 'with' statement."""

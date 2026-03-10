@@ -93,4 +93,3 @@ def run(
     for mapped_target in mapped_targets:
         mav_comm.send_mapped_target(mapped_target)
         mav_comm.logger.info(f"Sent mapped target: {mapped_target}")
-

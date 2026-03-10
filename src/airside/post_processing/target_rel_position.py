@@ -58,24 +58,29 @@ def locate_targets(
             normal=Vector3d(1, 0, 0),
             offset=3.0
         )
+        print("Warning: close_x_wall not detected, using default wall at x=3.0m")
     if walls["far_x_wall"] is None:
         walls["far_x_wall"] = Plane(
             normal=Vector3d(1, 0, 0),
             offset=6.0
         )
+        print("Warning: far_x_wall not detected, using default wall at x=6.0m")
     if walls["negative_y_wall"] is None:
         walls["negative_y_wall"] = Plane(
             normal=Vector3d(0, -1, 0),
             offset=3.0
         )
+        print("Warning: negative_y_wall not detected, using default wall at y=-3.0m")
     if walls["positive_y_wall"] is None:
         walls["positive_y_wall"] = Plane(
             normal=Vector3d(0, 1, 0),
             offset=3.0
         )
+        print("Warning: positive_y_wall not detected, using default wall at y=3.0m")
     if ground_vector is None:
         ground_vector = np.array([0, 0, 1])
         ground_offset = 1.0
+        print("Warning: ground plane not detected, using default horizontal ground plane at z=1.0m")
 
     close_wall = np.array(
         [

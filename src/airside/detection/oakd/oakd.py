@@ -50,8 +50,13 @@ class OakD(AbstractCamera):
         output_folder = Path(__file__).parent.parent.parent.parent.parent / "outputs"
         db_path = output_folder / "building.db"
         if db_path.exists():
-            self.main_logger.info(f"Removing old RTAB-Map database: {db_path}")
             db_path.unlink()
+        pcl_obstacle_path = output_folder / "obstaclePCL.ply"
+        if pcl_obstacle_path.exists():
+            pcl_obstacle_path.unlink()
+        pcl_ground_path = output_folder / "groundPCL.ply"
+        if pcl_ground_path.exists():
+            pcl_ground_path.unlink()
         
         def _save_pcl(points: np.ndarray | None, output_path: str) -> None:
             cloud = o3d.geometry.PointCloud()

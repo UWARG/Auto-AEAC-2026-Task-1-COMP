@@ -14,6 +14,11 @@ class CameraBundle:
     ):
         self.pipeline = pipeline
         self.camRgb = pipeline.create(dai.node.Camera).build(rgb_socket)
+        set_preview_keep_aspect_ratio = getattr(
+            self.camRgb, "setPreviewKeepAspectRatio", None
+        )
+        if callable(set_preview_keep_aspect_ratio):
+            set_preview_keep_aspect_ratio(False)
         self.monoLeft = pipeline.create(dai.node.Camera).build(left_socket)
         self.monoRight = pipeline.create(dai.node.Camera).build(right_socket)
         self.slam = pipeline.create(dai.node.RTABMapSLAM)

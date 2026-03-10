@@ -125,15 +125,14 @@ with dai.Pipeline() as p:
 
         if slamData is not None:
 
-            pose = slamData.pose
-            pos = pose.position
-            rot = pose.orientation
+            pos = slamData.getTranslation()
+            rot = slamData.getQuaternion()
 
             print("\nSLAM Pose:")
 
             print(
                 f"pos=({pos.x:.3f}, {pos.y:.3f}, {pos.z:.3f}) "
-                f"quat=({rot.x:.3f}, {rot.y:.3f}, {rot.z:.3f}, {rot.w:.3f})"
+                f"quat=({rot.qx:.3f}, {rot.qy:.3f}, {rot.qz:.3f}, {rot.qw:.3f})"
             )
 
         time.sleep(0.01)

@@ -87,8 +87,14 @@ def run(
     if not targets:
         mav_comm.logger.warning("No targets available for localization")
         return
+    
+    print("here0")
 
     mapped_targets = _locate_targets(planes, targets, first_direction)
 
+    print("here1")
+
     for mapped_target in mapped_targets:
         mav_comm.send_mapped_target(mapped_target)
+
+    print("here2")

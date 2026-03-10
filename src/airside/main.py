@@ -6,6 +6,11 @@ from pathlib import Path
 import time
 import threading
 
+# Keep BLAS runtime conservative to avoid teardown errors on some deployments.
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
 from airside.detection.oakd.oakd import OakD
 from airside.detection.arducam import Arducam
 from airside.post_processing import post_processing

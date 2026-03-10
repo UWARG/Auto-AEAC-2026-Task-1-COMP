@@ -17,17 +17,10 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None)
         odom = p.create(dai.node.BasaltVIO)
         stereo = cameras.stereo
         slam = cameras.slam
-
-        db_path = output_folder / "building.db"
-        db_path.unlink(missing_ok=True)
-
-        slam.setDatabasePath(str(db_path))
+        slam.setDatabasePath(str(output_folder / "building.db"))
         params = {
             "RGBD/CreateOccupancyGrid": "true",
-            "Grid/FromDepth": "true",
             "Grid/3D": "true",
-            "Grid/CellSize": "0.05",
-            "GridGlobal/CellSize": "0.05",
             "Rtabmap/SaveWMState": "true",
         }
         slam.setParams(params)

@@ -226,14 +226,6 @@ class BaseCameraDevice(abc.ABC):
         raise NotImplementedError
 
 
-class GPSCoord:
-    """GPS coordinate (latitude, longitude, altitude)."""
-
-    lat: float  # degrees
-    lon: float  # degrees
-    alt: float  # meters above sea level
-
-
 class ConfigOpenCV:
     """
     Configuration for the OpenCV camera.
@@ -403,97 +395,79 @@ class ConfigPiCamera2:
         return camera_controls
 
 
-if picamera2 is None:
+class CameraPiCamera2(BaseCameraDevice):
+    """
+    Class for the Picamera2 implementation of the camera.
+    """
 
-    class CameraPiCamera2(BaseCameraDevice):
+    __create_key = object()
+
+    @classmethod
+    def create(
+        cls, width: int, height: int, config: ConfigPiCamera2
+    ) -> "tuple[True, CameraPiCamera2] | tuple[False, None]":
         """
-        Class for the Picamera2 import failure.
+        Picamera2 Camera.
+
+        width: Width of the camera.
+        height: Height of the camera.
+        config: Configuration for PiCamera2 camera.
+
+        Return: Success, camera object.
         """
 
-        @classmethod
-        def create(
-            cls, width: int, height: int, config: ConfigPiCamera2
-        ) -> "tuple[False, None]":
+        if width <= 0:
             return False, None
 
-        def __init__(self) -> None:
-            pass
+        if height <= 0:
+            return False, None
 
-else:
+        try:
+            camera = picamera2.Picamera2()
 
-    class CameraPiCamera2(BaseCameraDevice):
+            camera_config = camera.create_preview_configuration(
+                {"size": (width, height), "format": "RGB888"}
+            )
+            camera.configure(camera_config)
+            camera.start()
+            controls = config.to_dict()
+            camera.set_controls(controls)
+
+            return True, CameraPiCamera2(cls.__create_key, camera, config)
+        except RuntimeError:
+            return False, None
+
+    def __init__(
+        self,
+        class_private_create_key: object,
+        camera: picamera2.Picamera2,  # type: ignore
+        config: ConfigPiCamera2,
+    ) -> None:
         """
-        Class for the Picamera2 implementation of the camera.
+        Private constructor, use create() method.
         """
+        assert (
+            class_private_create_key is CameraPiCamera2.__create_key
+        ), "Use create() method."
 
-        __create_key = object()
+        self.__camera = camera
+        self.__config = config
 
-        @classmethod
-        def create(
-            cls, width: int, height: int, config: ConfigPiCamera2
-        ) -> "tuple[True, CameraPiCamera2] | tuple[False, None]":
-            """
-            Picamera2 Camera.
+    def __del__(self) -> None:
+        """
+        Destructor. Release hardware resources.
+        """
+        self.__camera.close()
 
-            width: Width of the camera.
-            height: Height of the camera.
-            config: Configuration for PiCamera2 camera.
+    def run(self) -> tuple[True, np.ndarray] | tuple[False, None]:
+        """
+        Takes a picture with Picamera2 camera.
 
-            Return: Success, camera object.
-            """
+        Return: Success, image with shape (height, width, channels in BGR).
+        """
+        try:
+            image_data = self.__camera.capture_array(wait=self.__config.timeout)
+        except TimeoutError:
+            return False, None
 
-            if width <= 0:
-                return False, None
-
-            if height <= 0:
-                return False, None
-
-            try:
-                camera = picamera2.Picamera2()
-
-                camera_config = camera.create_preview_configuration(
-                    {"size": (width, height), "format": "RGB888"}
-                )
-                camera.configure(camera_config)
-                camera.start()
-                controls = config.to_dict()
-                camera.set_controls(controls)
-
-                return True, CameraPiCamera2(cls.__create_key, camera, config)
-            except RuntimeError:
-                return False, None
-
-        def __init__(
-            self,
-            class_private_create_key: object,
-            camera: picamera2.Picamera2,  # type: ignore
-            config: ConfigPiCamera2,
-        ) -> None:
-            """
-            Private constructor, use create() method.
-            """
-            assert (
-                class_private_create_key is CameraPiCamera2.__create_key
-            ), "Use create() method."
-
-            self.__camera = camera
-            self.__config = config
-
-        def __del__(self) -> None:
-            """
-            Destructor. Release hardware resources.
-            """
-            self.__camera.close()
-
-        def run(self) -> tuple[True, np.ndarray] | tuple[False, None]:
-            """
-            Takes a picture with Picamera2 camera.
-
-            Return: Success, image with shape (height, width, channels in BGR).
-            """
-            try:
-                image_data = self.__camera.capture_array(wait=self.__config.timeout)
-            except TimeoutError:
-                return False, None
-
-            return True, image_data
+        return True, image_data

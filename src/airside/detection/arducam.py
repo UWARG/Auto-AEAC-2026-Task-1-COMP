@@ -9,7 +9,6 @@ from util import (
     Colours,
     Coordinate,
     Target,
-    GPSCoord,
     CameraOption,
     create_camera,
     ConfigPiCamera2,
@@ -37,7 +36,6 @@ class Arducam(AbstractCamera):
         stop_event: threading.Event,
     ):
 
-        print("mode", self.mode)
         super().__init__(
             main_logger, detections_logger, detailed_detections_logger, stop_event
         )
@@ -49,16 +47,18 @@ class Arducam(AbstractCamera):
     def run(self):
         while not self.stop_event.is_set():
             time.sleep(1)
-            
-            # TODO: Add arducam detection code
-            target = Target(
-                colour=Colours.RED,
-                location=Coordinate(0.0, 0.0, 0.0),
-            )
 
-            if target is not None:
-                self.detections_logger.info(target)
-                self.detailed_detections_logger.info(target)
+            frame = self.capture_frame()
+            if frame is not None:
+                targets = self.find_targets(frame)
+                # best_target = self.get_best_target(targets)
+
+                for i in targets:
+                    target = Target(
+                        color=i.colour,
+                        location=Coordinate(x=i.x, y=i.y, z=0),
+                    )
+
                 self.main_logger.info(f"Detected target: {target}")
 
         self.main_logger.info("Stopping Arducam thread.")
@@ -68,44 +68,43 @@ class Arducam(AbstractCamera):
         Initialize camera hardware and apply settings.
         """
         # Initialize Raspberry Pi Camera Module 2 with specified camera index
-        if self.mode == "rpi":
-            print("Attempting to initialize rpi camera")
 
-            config = ConfigPiCamera2(
-                exposure_time=self.exposure_time, analogue_gain=self.analogue_gain
+        self.main_logger.info("Attempting to initialize rpi camera")
+
+        config = ConfigPiCamera2(
+            exposure_time=self.exposure_time, analogue_gain=self.analogue_gain
+        )
+
+        status, obj = create_camera(CameraOption.PICAM2, 500, 500, config)
+        self._camera = obj
+        if status:
+            self.main_logger.info(
+                f"picam2 camera {self.camera_index} initialized successfully"
             )
-            status, obj = create_camera(CameraOption.PICAM2, 500, 500, config)
-            self._camera = obj
-            if status:
-                self.main_logger.info(
-                    f"picam2 camera {self.camera_index} initialized successfully"
-                )
-            else:
-                self.main_logger.error(
-                    f"picam2 camera {self.camera_index} failed to initialize"
-                )
-
-            return status
+        else:
+            self.main_logger.error(
+                f"picam2 camera {self.camera_index} failed to initialize"
+            )
+        return status
 
     def capture_frame(self) -> np.ndarray | None:
         """
         Capture a single frame from the camera.
         """
         # OAK-D uses its own pipeline, not BaseCameraDevice
-        if self.mode == "rpi": 
-            if self._camera is None: 
-                self.main_logger.warning("Camera is None during frame capture.")
-                return None 
-            try: 
-                frame = self._camera.capture_array() 
-                return frame
-            except RuntimeError as e:  
-                self.main_logger.warning("Failed to capture frame from rpi camera")
-                return None 
-            except Exception as e: 
-                self.main_logger.error(f"Exception during frame capture: {e}")
-                return None 
-            
+
+        if self._camera is None:
+            self.main_logger.warning("Camera is None during frame capture.")
+            return None
+        try:
+            frame = self._camera.capture_array()
+            return frame
+        except RuntimeError as e:
+            self.main_logger.warning("Failed to capture frame from rpi camera")
+            return None
+        except Exception as e:
+            self.main_logger.error(f"Exception during frame capture: {e}")
+            return None
 
     def __enter__(self) -> "Camera":
         """Context manager entry - allows use with 'with' statement."""
@@ -154,12 +153,19 @@ class Arducam(AbstractCamera):
                 fill_ratio = colored_pixels_in_contour / area if area > 0 else 0
 
                 # Calculate center of this circular contour
-                moments = cv2.moments(contour)
-                if moments["m00"] == 0:
-                    continue
 
-                center_x = moments["m10"] / moments["m00"]
-                center_y = moments["m01"] / moments["m00"]
+                bx, by, bw, bh = cv2.boundingRect(contour)
+
+                center_x = bx + (bw / 2.0)
+                center_y = by + (bh / 2.0)
+
+                # moments = cv2.moments(contour)
+                # if moments["m00"] == 0:
+                #     continue
+
+                # center_x = moments["m10"] / moments["m00"]
+                # center_y = moments["m01"] / moments["m00"]
+
                 targets.append(
                     TargetDetection(
                         colour,

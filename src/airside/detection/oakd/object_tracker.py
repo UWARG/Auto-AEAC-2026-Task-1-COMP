@@ -10,12 +10,12 @@ def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None
     depthNode = cameras.stereo
     depthNode.setExtendedDisparity(True)
 
-    # spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
-    #     cameras.camRgb, depthNode, dai.NNModelDescription("yolov6-nano")
-    # )
     spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb, depthNode, dai.NNModelDescription("mobilenet-ssd")
+        cameras.camRgb, depthNode, dai.NNModelDescription("yolov6-nano")
     )
+    # spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
+    #     cameras.camRgb, depthNode, dai.NNModelDescription("mobilenet-ssd")
+    # )
 
     spatialDetectionNetwork.input.setBlocking(False)
     spatialDetectionNetwork.setDepthLowerThreshold(100)

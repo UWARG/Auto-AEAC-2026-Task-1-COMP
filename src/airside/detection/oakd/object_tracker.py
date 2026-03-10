@@ -15,10 +15,17 @@ def add_object_tracker(
     depthNode = cameras.stereo
     depthNode.setExtendedDisparity(True)
 
-    model_name = "mobilenet-ssd" if use_default_model else custom_model_name
-    spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb, depthNode, dai.NNModelDescription(model_name)
-    )
+    spatial_detection_node = p.create(dai.node.SpatialDetectionNetwork)
+    if use_default_model:
+        # Use the SDK's built-in default model selection path.
+        build_fn = getattr(spatial_detection_node, "build")
+        spatialDetectionNetwork = build_fn(cameras.camRgb, depthNode)
+    else:
+        spatialDetectionNetwork = spatial_detection_node.build(
+            cameras.camRgb,
+            depthNode,
+            dai.NNModelDescription(custom_model_name),
+        )
 
     spatialDetectionNetwork.setConfidenceThreshold(0.6)
     spatialDetectionNetwork.input.setBlocking(False)

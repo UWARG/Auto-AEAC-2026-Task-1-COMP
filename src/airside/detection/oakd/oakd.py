@@ -27,7 +27,7 @@ import time
 
 ENABLE_RERUN = False
 # If set to -1, the maximum difference theshold is ignored
-MAX_TIMESTAMP_DIFF_SEC = 0.2
+MAX_TIMESTAMP_DIFF_SEC = -1
 
 
 class OakD(AbstractCamera):
@@ -113,7 +113,6 @@ class OakD(AbstractCamera):
             try:
                 while not self.stop_event.is_set():
                     time.sleep(0.01)
-                    print("Looping...")
 
                     transform_msg = qSlamTransform.tryGet()
                     if isinstance(transform_msg, dai.TransformData):

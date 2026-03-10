@@ -75,7 +75,7 @@ def locate_targets(
         )
     if ground_vector is None:
         ground_vector = np.array([0, 0, 1])
-        ground_offset = 0.0
+        ground_offset = 1.0
 
     close_wall = np.array(
         [

@@ -22,6 +22,8 @@ def add_basalt_vio_rtab(p: dai.Pipeline, cameras: Optional[CameraBundle] = None)
             "RGBD/CreateOccupancyGrid": "true",
             "Grid/3D": "true",
             "Rtabmap/SaveWMState": "true",
+            "Rtabmap/TimeThr": "0",
+            "Mem/STMSize": "30",
         }
         slam.setParams(params)
 

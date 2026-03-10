@@ -90,16 +90,55 @@ def add_object_tracker(pipeline: dai.Pipeline, cameras: CameraBundle):
     depth_node.enableDistortionCorrection(False)
     depth_node.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb,
-        depth_node,
-        dai.NNModelDescription("yolov6-nano"),
-    )
+    # Keep this output for both branches (manual + fallback build).
+    rgb_output = cameras.camRgb.requestOutput((640, 400))
+
+    # Build an ImageAlign path that we will use when manual SDN wiring is possible.
+    image_align = pipeline.create(dai.node.ImageAlign)
+    image_align.setOutputSize(640, 400)
+    depth_node.depth.link(image_align.input)
+    rgb_output.link(image_align.inputAlignTo)
+
+    model_desc = dai.NNModelDescription("yolov6-nano")
+    model_path_getter = getattr(model_desc, "getModelPath", None)
+
+    using_explicit_imagealign = False
+
+    if callable(model_path_getter):
+        model_path = model_path_getter()
+        if isinstance(model_path, (str, Path)):
+            # Preferred path: manual SDN so aligned depth is explicitly injected.
+            spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork)
+            spatial_detection_network.setBlobPath(Path(model_path))
+            rgb_output.link(spatial_detection_network.input)
+            image_align.outputAligned.link(spatial_detection_network.inputDepth)
+            using_explicit_imagealign = True
+        else:
+            # Fallback for unexpected API behavior.
+            spatial_detection_network = pipeline.create(
+                dai.node.SpatialDetectionNetwork
+            ).build(
+                cameras.camRgb,
+                depth_node,
+                model_desc,
+            )
+    else:
+        # Older/newer SDK bindings may not expose model path; keep pipeline runnable.
+        spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork).build(
+            cameras.camRgb,
+            depth_node,
+            model_desc,
+        )
     spatial_detection_network.setConfidenceThreshold(0.6)
     spatial_detection_network.input.setBlocking(False)
     spatial_detection_network.setBoundingBoxScaleFactor(0.5)
     spatial_detection_network.setDepthLowerThreshold(100)
     spatial_detection_network.setDepthUpperThreshold(5000)
+
+    if using_explicit_imagealign:
+        print("[tracker] using explicit ImageAlign -> inputDepth path")
+    else:
+        print("[tracker] fallback build path (SDK did not expose model path API)")
 
     return spatial_detection_network.out.createOutputQueue(maxSize=16, blocking=False)
 

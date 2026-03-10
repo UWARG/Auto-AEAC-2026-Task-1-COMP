@@ -116,6 +116,7 @@ class OakD(AbstractCamera):
 
                     transform_msg = qSlamTransform.tryGet()
                     if isinstance(transform_msg, dai.TransformData):
+                        print("here silly")
                         quat = transform_msg.getQuaternion()
                         trans = transform_msg.getTranslation()
                         transform_timestamp = (
@@ -156,7 +157,7 @@ class OakD(AbstractCamera):
                                     location=cam_target_coord,
                                 )
                                 self.main_logger.info(
-                                    f"Result (no SLAM): {mapped_target} | Detection: {cam_target_coord}"
+                                    f"Result (no SLAM): {mapped_target}"
                                 )
                             continue
 

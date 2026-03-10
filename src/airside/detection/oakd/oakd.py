@@ -129,8 +129,24 @@ class OakD(AbstractCamera):
                     ):
                         if transform_timestamp is None or quat is None or trans is None:
                             self.main_logger.debug(
-                                "Skipping detection: waiting for SLAM"
+                                f"SLAM not ready, logging {len(detectionMsg.detections)} raw detections"
                             )
+                            for detection in detectionMsg.detections:
+                                spatial_coordinates = detection.spatialCoordinates
+                                cam_target_coord = Coordinate(
+                                    spatial_coordinates.z / 1000.0,
+                                    spatial_coordinates.x / 1000.0,
+                                    spatial_coordinates.y / 1000.0,
+                                )
+                                # Log without FRD conversion when SLAM not available
+                                mapped_target = Target(
+                                    colour=Colours.RED,
+                                    location=cam_target_coord,
+                                )
+                                self.detections_logger.info(mapped_target)
+                                self.detailed_detections_logger.info(
+                                    f"Result (no SLAM): {mapped_target} | Detection: {cam_target_coord}"
+                                )
                             continue
 
                         detections_timestamp = (

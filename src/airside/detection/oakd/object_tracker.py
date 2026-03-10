@@ -18,9 +18,21 @@ def add_object_tracker(p: dai.Pipeline, cameras: Optional["CameraBundle"] = None
     depthNode.enableDistortionCorrection(False)
     depthNode.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb, depthNode, dai.NNModelDescription("yolov6-nano")
+    imageAlign = p.create(dai.node.ImageAlign)
+    imageAlign.setOutputSize(640, 400)
+    depthNode.depth.link(imageAlign.input)
+    cameras.camRgb.requestOutput((640, 400)).link(imageAlign.inputAlignTo)
+
+    # Create spatial detection network with aligned depth
+    spatialDetectionNetwork = p.create(dai.node.SpatialDetectionNetwork)
+    spatialDetectionNetwork.setBlob(
+        dai.OpenVINO.Blob(dai.OpenVINO.Version.VERSION_2021_4, "yolov6n_coco_640x640")
     )
+    spatialDetectionNetwork.setNumInferenceThreads(2)
+
+    # Connect RGB for detection and aligned depth for spatial calculations
+    cameras.camRgb.requestOutput((640, 400)).link(spatialDetectionNetwork.input)
+    imageAlign.outputAligned.link(spatialDetectionNetwork.inputDepth)
 
     spatialDetectionNetwork.setConfidenceThreshold(0.6)
     spatialDetectionNetwork.input.setBlocking(False)

@@ -1,89 +1,119 @@
-#!/usr/bin/env python3
-
-"""Standalone OAK-D test pipeline for spatial detections + VIO/SLAM.
-
-This script builds a single DepthAI pipeline with:
-- Spatial detections using default YOLO model (yolov6-nano)
-- Basalt VIO feeding RTABMap SLAM
-
-Both key output queues are configured with maxSize=1 and non-blocking mode:
-- Spatial detections queue
-- SLAM transform queue
-"""
-
-from __future__ import annotations
-
-from typing import Any
-
 import depthai as dai
-
-from src.airside.detection.oakd.camera_bundle import CameraBundle
-from src.airside.detection.oakd.Basalt_VIO_RTab import add_basalt_vio_rtab
+import time
 
 
-def build_pipeline() -> tuple[dai.Pipeline, Any, Any]:
-    """Create and start a pipeline, returning detection and transform queues."""
-    pipeline = dai.Pipeline()
+pipeline = dai.Pipeline()
 
-    with pipeline:
-        cameras = CameraBundle(pipeline)
 
-        # Spatial YOLO detection on RGB + stereo depth.
-        depth_node = cameras.stereo
-        depth_node.setExtendedDisparity(True)
-        depth_node.setOutputSize(640, 400)
+colorCam = pipeline.create(dai.node.ColorCamera)
+left = pipeline.create(dai.node.MonoCamera)
+right = pipeline.create(dai.node.MonoCamera)
 
-        spatial_detection_network = pipeline.create(
-            dai.node.SpatialDetectionNetwork
-        ).build(cameras.camRgb, depth_node, dai.NNModelDescription("yolov6-nano"))
-        spatial_detection_network.setConfidenceThreshold(0.6)
-        spatial_detection_network.input.setBlocking(False)
-        spatial_detection_network.setBoundingBoxScaleFactor(0.5)
-        spatial_detection_network.setDepthLowerThreshold(100)
-        spatial_detection_network.setDepthUpperThreshold(5000)
+colorCam.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+colorCam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+colorCam.setPreviewSize(640, 640)
+colorCam.setInterleaved(False)
 
-        # Add Basalt VIO + RTABMap SLAM onto the same camera bundle.
-        add_basalt_vio_rtab(pipeline, cameras)
+left.setBoardSocket(dai.CameraBoardSocket.CAM_B)
+right.setBoardSocket(dai.CameraBoardSocket.CAM_C)
 
-        q_detections = spatial_detection_network.out.createOutputQueue(
-            maxSize=1,
-            blocking=False,
+left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+
+
+stereo = pipeline.create(dai.node.StereoDepth)
+stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+
+left.out.link(stereo.left)
+right.out.link(stereo.right)
+
+
+spatialDetection = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
+
+spatialDetection.setBlobPath(
+    dai.OpenVINO.Blob(
+        dai.OpenVINO.Version.VERSION_2021_4,
+        dai.NNModelDescription(
+            "depthai/yolov6-nano"
         )
-        q_transform = cameras.slam.transform.createOutputQueue(
-            maxSize=1,
-            blocking=False,
-        )
+    )
+)
 
-    pipeline.start()
-    return pipeline, q_detections, q_transform
+spatialDetection.setConfidenceThreshold(0.5)
+spatialDetection.setNumClasses(80)
+spatialDetection.setCoordinateSize(4)
+spatialDetection.setAnchors([])
+spatialDetection.setAnchorMasks({})
+spatialDetection.setIouThreshold(0.5)
+
+colorCam.preview.link(spatialDetection.input)
+stereo.depth.link(spatialDetection.inputDepth)
 
 
-def main() -> None:
-    pipeline, q_detections, q_transform = build_pipeline()
+imu = pipeline.create(dai.node.IMU)
+imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 400)
+imu.enableIMUSensor(dai.IMUSensor.GYROSCOPE_RAW, 400)
+imu.setBatchReportThreshold(1)
+imu.setMaxBatchReports(10)
 
-    print("Pipeline started: YOLO spatial detections + Basalt/RTABMap VIO/SLAM")
-    print("Queues configured with maxSize=1 (detections + transform)")
 
-    try:
-        while True:
-            det_msg = q_detections.tryGet()
-            tf_msg = q_transform.tryGet()
+vio = pipeline.create(dai.node.Vio)
 
-            if isinstance(det_msg, dai.SpatialImgDetections):
-                print(f"detections={len(det_msg.detections)}")
+stereo.rectifiedLeft.link(vio.left)
+stereo.rectifiedRight.link(vio.right)
+imu.out.link(vio.imu)
 
-            if isinstance(tf_msg, dai.TransformData):
-                translation = tf_msg.getTranslation()
+
+xoutDet = pipeline.create(dai.node.XLinkOut)
+xoutDet.setStreamName("detections")
+
+xoutVio = pipeline.create(dai.node.XLinkOut)
+xoutVio.setStreamName("vio")
+
+spatialDetection.out.link(xoutDet.input)
+vio.out.link(xoutVio.input)
+
+
+with dai.Device(pipeline) as device:
+
+    detQueue = device.getOutputQueue("detections", maxSize=1, blocking=False)
+    vioQueue = device.getOutputQueue("vio", maxSize=1, blocking=False)
+
+    print("Pipeline started")
+
+    while True:
+
+        
+        det = detQueue.tryGet()
+
+        if det is not None:
+            detections = det.detections
+            print("\nDetections:")
+
+            for d in detections:
                 print(
-                    "transform="
-                    f"({translation.x:.3f}, {translation.y:.3f}, {translation.z:.3f})"
+                    f"Label: {d.label} "
+                    f"Conf: {d.confidence:.2f} "
+                    f"XYZ: ({d.spatialCoordinates.x:.1f}, "
+                    f"{d.spatialCoordinates.y:.1f}, "
+                    f"{d.spatialCoordinates.z:.1f}) mm"
                 )
 
-    except KeyboardInterrupt:
-        print("Stopping pipeline...")
-    finally:
-        pipeline.stop()
+        
+        vioData = vioQueue.tryGet()
 
+        if vioData is not None:
+            pose = vioData.pose
 
-if __name__ == "__main__":
-    main()
+            pos = pose.position
+            rot = pose.rotation
+
+            print("\nVIO Pose:")
+            print(
+                f"Position: ({pos.x:.3f}, {pos.y:.3f}, {pos.z:.3f}) m"
+            )
+            print(
+                f"Quaternion: ({rot.i:.3f}, {rot.j:.3f}, {rot.k:.3f}, {rot.real:.3f})"
+            )
+
+        time.sleep(0.01)

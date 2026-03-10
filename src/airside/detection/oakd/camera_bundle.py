@@ -13,7 +13,7 @@ class CameraBundle:
         rgb_socket=dai.CameraBoardSocket.CAM_A,
         left_socket=dai.CameraBoardSocket.CAM_B,
         right_socket=dai.CameraBoardSocket.CAM_C,
-        mono_resolution=(640, 400),
+        mono_resolution=(640, 320),
         sensor_fps: int = STEREO_DEFAULT_FPS,
     ):
         self.pipeline = pipeline

@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from util import Plane, Target, MappedTarget, Direction, Coordinate, Colours
+from util import Plane, Target, MappedTarget, Direction, Coordinate, Colours, Vector3d
 
 
 def locate_targets(
@@ -51,6 +51,31 @@ def locate_targets(
                 else:
                     walls["positive_y_wall"] = walls["negative_y_wall"]
                     walls["negative_y_wall"] = plane
+
+    # TODO: TEMPORARY DEFAULT if any walls are missing
+    if walls["close_x_wall"] is None:
+        walls["close_x_wall"] = Plane(
+            normal=Vector3d(1, 0, 0),
+            offset=3.0
+        )
+    if walls["far_x_wall"] is None:
+        walls["far_x_wall"] = Plane(
+            normal=Vector3d(1, 0, 0),
+            offset=6.0
+        )
+    if walls["negative_y_wall"] is None:
+        walls["negative_y_wall"] = Plane(
+            normal=Vector3d(0, -1, 0),
+            offset=3.0
+        )
+    if walls["positive_y_wall"] is None:
+        walls["positive_y_wall"] = Plane(
+            normal=Vector3d(0, 1, 0),
+            offset=3.0
+        )
+    if ground_vector is None:
+        ground_vector = np.array([0, 0, 1])
+        ground_offset = 0.0
 
     close_wall = np.array(
         [

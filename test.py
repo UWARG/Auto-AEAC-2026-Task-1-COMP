@@ -52,8 +52,8 @@ def add_basalt_vio_rtab(pipeline: dai.Pipeline, cameras: CameraBundle) -> None:
     slam.setDatabasePath(str(output_folder / "building_test.db"))
     slam.setParams(
         {
-            "RGBD/CreateOccupancyGrid": "true",
-            "Grid/3D": "true",
+            "RGBD/CreateOccupancyGrid": "false",
+            "Grid/3D": "false",
             "Rtabmap/SaveWMState": "true",
         }
     )
@@ -82,22 +82,16 @@ def add_basalt_vio_rtab(pipeline: dai.Pipeline, cameras: CameraBundle) -> None:
 
 def add_object_tracker(pipeline: dai.Pipeline, cameras: CameraBundle):
     """Attach YOLO spatial detector and return detections queue."""
-    depth_node = cameras.stereo
+    depth_node = pipeline.create(dai.node.StereoDepth)
+    cameras.leftOutput.link(depth_node.left)
+    cameras.rightOutput.link(depth_node.right)
+
     depth_node.setExtendedDisparity(True)
     depth_node.setOutputSize(640, 400)
     depth_node.setLeftRightCheck(True)
     depth_node.setSubpixel(True)
     depth_node.enableDistortionCorrection(False)
     depth_node.setDepthAlign(dai.CameraBoardSocket.CAM_A)
-
-    # Keep this output for both branches (manual + fallback build).
-    rgb_output = cameras.camRgb.requestOutput((640, 400))
-
-    # Build an ImageAlign path that we will use when manual SDN wiring is possible.
-    image_align = pipeline.create(dai.node.ImageAlign)
-    image_align.setOutputSize(640, 400)
-    depth_node.depth.link(image_align.input)
-    rgb_output.link(image_align.inputAlignTo)
 
     model_desc = dai.NNModelDescription("yolov6-nano")
     model_path_getter = getattr(model_desc, "getModelPath", None)
@@ -107,6 +101,12 @@ def add_object_tracker(pipeline: dai.Pipeline, cameras: CameraBundle):
     if callable(model_path_getter):
         model_path = model_path_getter()
         if isinstance(model_path, (str, Path)):
+            rgb_output = cameras.camRgb.requestOutput((640, 400))
+            image_align = pipeline.create(dai.node.ImageAlign)
+            image_align.setOutputSize(640, 400)
+            depth_node.depth.link(image_align.input)
+            rgb_output.link(image_align.inputAlignTo)
+
             # Preferred path: manual SDN so aligned depth is explicitly injected.
             spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork)
             spatial_detection_network.setBlobPath(Path(model_path))
@@ -165,7 +165,11 @@ def run_camera_test(duration_sec: int) -> None:
 
         try:
             while time.time() - start < duration_sec:
-                transform_msg = q_slam_transform.tryGet()
+                try:
+                    transform_msg = q_slam_transform.tryGet()
+                except (RuntimeError, Exception) as e:
+                    print(f"[camera-test] transform queue closed: {e}")
+                    break
                 if isinstance(transform_msg, dai.TransformData):
                     transforms_seen += 1
                     trans = transform_msg.getTranslation()
@@ -176,7 +180,11 @@ def run_camera_test(duration_sec: int) -> None:
                         f"quat=({quat.qw:.4f}, {quat.qx:.4f}, {quat.qy:.4f}, {quat.qz:.4f})"
                     )
 
-                detections_msg = q_detections.tryGet()
+                try:
+                    detections_msg = q_detections.tryGet()
+                except (RuntimeError, Exception) as e:
+                    print(f"[camera-test] detections queue closed: {e}")
+                    break
                 if detections_msg and isinstance(
                     detections_msg, dai.SpatialImgDetections
                 ):
@@ -191,11 +199,17 @@ def run_camera_test(duration_sec: int) -> None:
                             f"xyz_mm=({xyz.x:.1f}, {xyz.y:.1f}, {xyz.z:.1f})"
                         )
 
-                obstacle_msg = q_obstacle_pcl.tryGet()
+                try:
+                    obstacle_msg = q_obstacle_pcl.tryGet()
+                except (RuntimeError, Exception):
+                    obstacle_msg = None
                 if obstacle_msg is not None:
                     print("[obstacle-pcl] received")
 
-                ground_msg = q_ground_pcl.tryGet()
+                try:
+                    ground_msg = q_ground_pcl.tryGet()
+                except (RuntimeError, Exception):
+                    ground_msg = None
                 if ground_msg is not None:
                     print("[ground-pcl] received")
 

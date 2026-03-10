@@ -85,10 +85,24 @@ def add_object_tracker(pipeline: dai.Pipeline, cameras: CameraBundle):
     depth_node = cameras.stereo
     depth_node.setExtendedDisparity(True)
     depth_node.setOutputSize(640, 400)
+    depth_node.setLeftRightCheck(True)
+    depth_node.setSubpixel(True)
+    depth_node.enableDistortionCorrection(False)
+    depth_node.setDepthAlign(dai.CameraBoardSocket.CAM_A)
 
-    spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork).build(
-        cameras.camRgb, depth_node, dai.NNModelDescription("yolov6-nano")
+    rgb_output = cameras.camRgb.requestOutput((640, 400))
+
+    image_align = pipeline.create(dai.node.ImageAlign)
+    image_align.setOutputSize(640, 400)
+    depth_node.depth.link(image_align.input)
+    rgb_output.link(image_align.inputAlignTo)
+
+    spatial_detection_network = pipeline.create(dai.node.SpatialDetectionNetwork)
+    spatial_detection_network.setBlob(
+        dai.OpenVINO.Blob(dai.OpenVINO.Version.VERSION_2021_4, "yolov6n_coco_640x640")
     )
+    rgb_output.link(spatial_detection_network.input)
+    image_align.outputAligned.link(spatial_detection_network.inputDepth)
     spatial_detection_network.setConfidenceThreshold(0.6)
     spatial_detection_network.input.setBlocking(False)
     spatial_detection_network.setBoundingBoxScaleFactor(0.5)

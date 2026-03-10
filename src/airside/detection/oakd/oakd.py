@@ -127,7 +127,6 @@ class OakD(AbstractCamera):
                     if detectionMsg and isinstance(
                         detectionMsg, dai.SpatialImgDetections
                     ):
-                        print("hi")
                         if transform_timestamp is None or quat is None or trans is None:
                             self.main_logger.debug(
                                 f"SLAM not ready, logging {len(detectionMsg.detections)} raw detections"
@@ -194,6 +193,9 @@ class OakD(AbstractCamera):
                             self.detections_logger.info(mapped_target)
                             self.detailed_detections_logger.info(
                                 f"Result: {mapped_target} | Pose: {origin_cam_coord} - {origin_cam_q} | Detection: {cam_target_coord}"
+                            )
+                            self.main_logger.debug(
+                                f"Logged detection with SLAM pose | timestamp: {detections_timestamp}, transform timestamp: {transform_timestamp}"
                             )
             finally:
                 final_obstacle_msg = _drain_latest(qObstaclePCL)

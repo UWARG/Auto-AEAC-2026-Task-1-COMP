@@ -116,7 +116,6 @@ class OakD(AbstractCamera):
                         time.sleep(0.01)
 
                         transform_msg = qSlamTransform.tryGet()
-                        print(f"Got transform message: {transform_msg}")
                         if isinstance(transform_msg, dai.TransformData):
                             quat = transform_msg.getQuaternion()
                             trans = transform_msg.getTranslation()

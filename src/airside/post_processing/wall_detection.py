@@ -65,7 +65,7 @@ def find_walls(filename: str):
 
     while True:
         plane_model, inliers = remaining_cloud.segment_plane(
-            distance_threshold=threshold, ransac_n=3, num_iterations=5000
+            distance_threshold=threshold, ransac_n=3, num_iterations=10000
         )
 
         if len(inliers) < min_pts:

@@ -3,8 +3,8 @@ import logging
 import time
 from typing import List
 
-
 from .abstract_camera import AbstractCamera
+
 from util import (
     Colours,
     Coordinate,
@@ -13,6 +13,7 @@ from util import (
     create_camera,
     ConfigPiCamera2,
 )
+
 import cv2
 import numpy as np
 

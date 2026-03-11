@@ -113,6 +113,17 @@ class MappedTarget:
         return f"(colour={self.colour}, location={self.location}, cardinal_direction={self.direction}, wall_target={self.wall_target})"
 
 
+class ImageLocation:
+    """Represents point on an image (+x right, +y down)"""
+
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return f"({self.x}, {self.y})"
+
+
 class RCChannel:
     """Represents a single RC channel with raw value and activity status."""
 

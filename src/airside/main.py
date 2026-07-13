@@ -18,10 +18,16 @@ from util import Coordinate, Direction, MappedTarget, Vector3d
 from airside.mavlink_comm import MavlinkComm
 
 
-# If set to false, then the system uses the RC switch to trigger post-processing.
-# If set to true, then post-processing is triggered by pressing enter in the console.
+# If True, post-processing is triggered by pressing Enter in the console.
+# If False, the RC switch is used (which requires USE_MAVLINK = True).
 TRIGGER_DEBUG_MODE = True
-USE_MAVLINK = True
+
+# If False, the drone MAVLink serial link is not used at all: heading defaults
+# to NORTH and post-processing is always triggered from the terminal.
+USE_MAVLINK = False
+
+# If True, mapped targets are streamed to the groundstation over TCP.
+USE_GROUNDSTATION_SOCKET = True
 
 POST_PROCESSING_REQUEST_CHANNEL = (
     11  # RC channel number to monitor for post-processing trigger
@@ -42,7 +48,16 @@ def main(starting_time: str) -> None:
         main_logger.info(f"Initializing Mavlink connection")
     else:
         main_logger.info(f"Mavlink connection disabled")
-    mav_comm = MavlinkComm(main_logger, USE_MAVLINK, POST_PROCESSING_REQUEST_CHANNEL)
+    mav_comm = MavlinkComm(
+        main_logger,
+        use_mavlink=USE_MAVLINK,
+        post_processing_request_channel=POST_PROCESSING_REQUEST_CHANNEL,
+        use_socket=USE_GROUNDSTATION_SOCKET,
+    )
+
+    # The RC-switch trigger needs the MAVLink link; fall back to the terminal
+    # trigger whenever MAVLink is disabled.
+    use_terminal_trigger = TRIGGER_DEBUG_MODE or not USE_MAVLINK
 
     detections_formatter = logging.Formatter("%(message)s")
     main_logger.info("Creating output directories and files")
@@ -85,12 +100,16 @@ def main(starting_time: str) -> None:
     oakd.start()
     # arducam.start()
 
-    if TRIGGER_DEBUG_MODE:
+    if use_terminal_trigger:
         main_logger.info(
-            "Trigger debug mode enabled. Press Enter to trigger post-processing."
+            "Terminal trigger enabled. Press Enter to trigger post-processing."
         )
         input()
-    elif USE_MAVLINK:
+    else:
+        main_logger.info(
+            f"Waiting for RC channel {POST_PROCESSING_REQUEST_CHANNEL} switch "
+            "to trigger post-processing."
+        )
         while mav_comm.post_processing_requested() is False:
             mav_comm.process_data_stream()
 
@@ -113,6 +132,8 @@ def main(starting_time: str) -> None:
         mav_comm,
         initial_heading,
     )
+
+    mav_comm.close()
 
 
 if __name__ == "__main__":

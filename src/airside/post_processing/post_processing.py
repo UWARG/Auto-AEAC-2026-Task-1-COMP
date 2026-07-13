@@ -94,5 +94,9 @@ def run(
     mapped_targets = _locate_targets(planes, targets, first_direction)
 
     for mapped_target in mapped_targets:
-        mav_comm.send_mapped_target(mapped_target)
-        mav_comm.logger.info(f"Sent mapped target: {mapped_target}")
+        if mav_comm.send_mapped_target(mapped_target):
+            mav_comm.logger.info(f"Sent mapped target: {mapped_target}")
+        else:
+            mav_comm.logger.warning(
+                f"Failed to deliver mapped target to groundstation: {mapped_target}"
+            )

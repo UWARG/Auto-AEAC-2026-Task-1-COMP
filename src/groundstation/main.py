@@ -1,16 +1,16 @@
 """
-Mavlink statustext parser for groundstation
+TCP target parser for groundstation
 
-This module recieves a statustext message and logs it as a readable string.
-The message will be an encoded byte which contains 2 chars and 2 doubles
-seperated by commas. The first character indicates the wall's cardinal
+This module receives newline-delimited CSV target messages over a TCP socket
+and logs them as readable strings. Each message contains 2 chars and 2 doubles
+separated by commas. The first character indicates the wall's cardinal
 direction, the second indicates the color of the target. The doubles
 indicate the position up and to the right of the bottom left corner of the
 wall respectively.
 Cardinal DIRECTIONS dictionary:
 n for north, s for south, e for east, w for west
 COLORS dictionary:
-r for red, g for green, b for black, u for blue, y for yellow
+r for red, g for green, b for black, u for blue, y for yellow, w for white
 
 """
 
@@ -20,10 +20,17 @@ import multiprocessing
 from datetime import datetime
 from pathlib import Path
 import sys
-from groundstation.MavlinkReceiver import MavlinkReciever
+from groundstation.target_receiver import TargetReceiver
+from util import GROUNDSTATION_TCP_HOST, GROUNDSTATION_TCP_PORT
 
-CONNECTION_STRING = "tcpin:localhost:1400"
-COLORS = {"r": "red", "b": "black", "u": "blue", "y": "yellow", "g": "green"}
+COLORS = {
+    "r": "red",
+    "b": "black",
+    "u": "blue",
+    "y": "yellow",
+    "g": "green",
+    "w": "white",
+}
 DIRECTIONS = {"n": "north", "s": "south", "w": "west", "e": "east"}
 TESTING_MODULE = "groundstation.message_testing"
 
@@ -63,12 +70,14 @@ def main() -> None:
     target_info_logger.setLevel(logging.INFO)
     num_corrupted = 0
     assert main_logger is not None
-    receiver = MavlinkReciever(CONNECTION_STRING, main_logger)
+    receiver = TargetReceiver(
+        GROUNDSTATION_TCP_HOST, GROUNDSTATION_TCP_PORT, main_logger
+    )
 
     while True:
         try:
             success, info = receiver.get_message()
-            if not success:
+            if not success or info is None:
                 continue
             # direction
             direction = DIRECTIONS[info[0]]
@@ -102,8 +111,13 @@ def main() -> None:
         except Exception as e:
             main_logger.error(f"A problem occured {e}")
 
+    receiver.close()
+
 
 if __name__ == "__main__":
-    multiprocessing.Process(target=test).start()
+    # The self-test harness (which streams fake targets at the receiver) only
+    # runs when explicitly requested with --test; by default the groundstation
+    # just listens for the real airside connection.
+    if "--test" in sys.argv:
+        multiprocessing.Process(target=test).start()
     main()
-    print("done")

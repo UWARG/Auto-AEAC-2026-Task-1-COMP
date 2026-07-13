@@ -12,3 +12,8 @@ notes.txt
 
 #WSL Files
 *Zone.Identifier
+
+# DepthAI Chache
+.depthai_cached_models/
+
+outputs/

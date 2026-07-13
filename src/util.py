@@ -5,13 +5,22 @@ This module provides core data structures and enums used throughout the drone co
 including local coordinate representation, MAVLink message types, and RC channel data.
 """
 
+from __future__ import annotations
+
 from enum import Enum
 import cv2
 import numpy as np
 import abc
 
-import libcamera
-import picamera2
+# Pi-only camera libraries
+try:
+    import libcamera
+except ImportError:
+    libcamera = None
+try:
+    import picamera2
+except ImportError:
+    picamera2 = None
 
 UINT16_MAX = 65535
 
@@ -20,6 +29,10 @@ AIRSIDE_COMPONENT_ID = 191
 MAVLINK_TCP_HOST = "127.0.0.1"
 MAVLINK_TCP_PORT = 14550
 MAVLINK_RECEIVE_TIMEOUT_SEC = 1
+
+# Airside <-> groundstation target reporting socket.
+GROUNDSTATION_TCP_HOST = "127.0.0.1"
+GROUNDSTATION_TCP_PORT = 14555
 
 
 class MavlinkMessageType(Enum):
@@ -111,6 +124,38 @@ class MappedTarget:
 
     def __str__(self):
         return f"(colour={self.colour}, location={self.location}, cardinal_direction={self.direction}, wall_target={self.wall_target})"
+
+
+# Single-letter keys shared by the airside sender and groundstation receiver.
+DIRECTION_TO_KEY: dict[Direction, str] = {
+    Direction.NORTH: "n",
+    Direction.SOUTH: "s",
+    Direction.EAST: "e",
+    Direction.WEST: "w",
+}
+
+COLOUR_NAME_TO_KEY: dict[str, str] = {
+    "RED": "r",
+    "GREEN": "g",
+    "BLACK": "b",
+    "BLUE": "u",
+    "YELLOW": "y",
+    "WHITE": "w",
+}
+
+
+def serialize_mapped_target(target: MappedTarget) -> str:
+    """Serialize a MappedTarget into the groundstation wire format.
+
+    Format: ``direction_key,colour_key,up,right`` where ``up`` is the metres
+    up and ``right`` the metres right from the bottom-left corner of the wall
+    (MappedTarget.location.y and .x respectively).
+    """
+    direction_key = DIRECTION_TO_KEY.get(target.direction, "n")
+    colour_key = COLOUR_NAME_TO_KEY.get(target.colour.name.upper(), "r")
+    up = target.location.y
+    right = target.location.x
+    return f"{direction_key},{colour_key},{up},{right}"
 
 
 class RCChannel:
@@ -248,7 +293,7 @@ class ConfigOpenCV:
         self.device_index = device_index
 
 
-class CameraOption(enum.Enum):
+class CameraOption(Enum):
     """
     enum for type of camera object to create.
     """

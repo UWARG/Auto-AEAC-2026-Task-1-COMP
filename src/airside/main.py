@@ -6,6 +6,11 @@ from pathlib import Path
 import time
 import threading
 
+# Keep BLAS runtime conservative to avoid teardown errors on some deployments.
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
 from airside.detection.oakd.oakd import OakD
 from airside.detection.arducam import Arducam
 from airside.post_processing import post_processing
@@ -13,11 +18,23 @@ from util import Coordinate, Direction, MappedTarget, Vector3d
 from airside.mavlink_comm import MavlinkComm
 
 
-# If set to false, then the system uses the RC switch to trigger post-processing.
-# If set to true, then post-processing is triggered by pressing enter in the console.
+# If True, post-processing is triggered by pressing Enter in the console.
+# If False, the RC switch is used (which requires USE_MAVLINK = True).
 TRIGGER_DEBUG_MODE = True
 
-USE_MAVLINK = True
+# If False, the drone MAVLink serial link is not used at all: heading defaults
+# to NORTH and post-processing is always triggered from the terminal.
+USE_MAVLINK = False
+
+# If True, mapped targets are streamed to the groundstation over TCP.
+USE_GROUNDSTATION_SOCKET = True
+
+POST_PROCESSING_REQUEST_CHANNEL = (
+    11  # RC channel number to monitor for post-processing trigger
+)
+
+OBSTACLE_PCL_FILENAME = "obstaclePCL.ply"
+GROUND_PCL_FILENAME = "groundPCL.ply"
 
 
 def main(starting_time: str) -> None:
@@ -28,8 +45,19 @@ def main(starting_time: str) -> None:
     output_folder.mkdir(exist_ok=True)
 
     if USE_MAVLINK:
-        main_logger.info("Initializing Mavlink Connection")
-        mav_comm = MavlinkComm(main_logger, use_mavlink=USE_MAVLINK)
+        main_logger.info(f"Initializing Mavlink connection")
+    else:
+        main_logger.info(f"Mavlink connection disabled")
+    mav_comm = MavlinkComm(
+        main_logger,
+        use_mavlink=USE_MAVLINK,
+        post_processing_request_channel=POST_PROCESSING_REQUEST_CHANNEL,
+        use_socket=USE_GROUNDSTATION_SOCKET,
+    )
+
+    # The RC-switch trigger needs the MAVLink link; fall back to the terminal
+    # trigger whenever MAVLink is disabled.
+    use_terminal_trigger = TRIGGER_DEBUG_MODE or not USE_MAVLINK
 
     detections_formatter = logging.Formatter("%(message)s")
     main_logger.info("Creating output directories and files")
@@ -38,7 +66,7 @@ def main(starting_time: str) -> None:
     detections_logger.setLevel(logging.INFO)
     detections_logger.propagate = False
     detections_handler_file = logging.FileHandler(
-        str(output_folder / f"targets_{starting_time}.txt")
+        str(output_folder / f"targets_{starting_time}.txt"), encoding="utf-8"
     )
     detections_handler_file.setFormatter(detections_formatter)
     detections_logger.addHandler(detections_handler_file)
@@ -47,43 +75,41 @@ def main(starting_time: str) -> None:
     detailed_detections_logger.setLevel(logging.INFO)
     detailed_detections_logger.propagate = False
     detailed_detections_handler_file = logging.FileHandler(
-        str(output_folder / f"detailed_targets_{starting_time}.txt")
+        str(output_folder / f"detailed_targets_{starting_time}.txt"), encoding="utf-8"
     )
     detailed_detections_handler_file.setFormatter(detections_formatter)
     detailed_detections_logger.addHandler(detailed_detections_handler_file)
 
     stop_event = threading.Event()
 
-    oakd = OakD(main_logger, detections_logger, detailed_detections_logger, stop_event)
+    obstacle_pcl_path = str(output_folder / OBSTACLE_PCL_FILENAME)
+    ground_pcl_path = str(output_folder / GROUND_PCL_FILENAME)
+
+    oakd = OakD(
+        main_logger,
+        detections_logger,
+        detailed_detections_logger,
+        stop_event,
+        obstacle_pcl_path=obstacle_pcl_path,
+        ground_pcl_path=ground_pcl_path,
+    )
     # arducam = Arducam(main_logger, detections_logger, detailed_detections_logger, stop_event)
 
-    heading_mapping = {
-        Direction.NORTH: 0.0,
-        Direction.EAST: 90.0,
-        Direction.SOUTH: 180.0,
-        Direction.WEST: 270.0,
-    }
-    if USE_MAVLINK:
-        main_logger.info("Getting Heading through Mavlink")
-        initial_heading_deg = mav_comm.get_heading()
-    else:
-        initial_heading_deg = 0
-
-    initial_heading = Direction.NORTH
-    for dir, deg in heading_mapping.items():
-        if abs(initial_heading_deg - deg) <= 45:
-            initial_heading = dir
-            break
+    initial_heading = mav_comm.get_heading_direction()
 
     oakd.start()
     # arducam.start()
 
-    if TRIGGER_DEBUG_MODE:
+    if use_terminal_trigger:
         main_logger.info(
-            "Trigger debug mode enabled. Press Enter to trigger post-processing."
+            "Terminal trigger enabled. Press Enter to trigger post-processing."
         )
         input()
-    elif USE_MAVLINK:
+    else:
+        main_logger.info(
+            f"Waiting for RC channel {POST_PROCESSING_REQUEST_CHANNEL} switch "
+            "to trigger post-processing."
+        )
         while mav_comm.post_processing_requested() is False:
             mav_comm.process_data_stream()
 
@@ -99,13 +125,15 @@ def main(starting_time: str) -> None:
     for handler in main_logger.handlers:
         handler.flush()
 
-    if USE_MAVLINK:
-        post_processing.run(
-            str(output_folder / "building.db"),
-            str(output_folder / f"targets_{starting_time}.txt"),
-            mav_comm,
-            initial_heading,
-        )
+    post_processing.run(
+        obstacle_pcl_path,
+        ground_pcl_path,
+        str(output_folder / f"targets_{starting_time}.txt"),
+        mav_comm,
+        initial_heading,
+    )
+
+    mav_comm.close()
 
 
 if __name__ == "__main__":
@@ -124,7 +152,7 @@ if __name__ == "__main__":
     logs_folder = Path("logs")
     logs_folder.mkdir(exist_ok=True, parents=True)
     main_logger_handler_file = logging.FileHandler(
-        str(logs_folder / f"airside_{starting_time}.log")
+        str(logs_folder / f"airside_{starting_time}.log"), encoding="utf-8"
     )
     main_logger_handler_file.setFormatter(main_formatter)
     main_logger.addHandler(main_logger_handler_file)

@@ -2,23 +2,34 @@ import time
 import random
 import logging
 import datetime
+import socket
 from pathlib import Path
 import groundstation.main as groundscript
-from pymavlink import mavutil
+from util import GROUNDSTATION_TCP_HOST, GROUNDSTATION_TCP_PORT
 
-CONNECTION_STRING = "tcp:localhost:1400"
-AIRSIDE_COMPONENT_ID = 191
 NUM_MESSAGES = 5
+CONNECT_RETRIES = 10
+
+
+def _connect() -> socket.socket:
+    """Connect to the groundstation server, retrying while it starts up."""
+    last_error: OSError | None = None
+    for _ in range(CONNECT_RETRIES):
+        try:
+            return socket.create_connection(
+                (GROUNDSTATION_TCP_HOST, GROUNDSTATION_TCP_PORT), timeout=5
+            )
+        except OSError as e:
+            last_error = e
+            time.sleep(1)
+    raise ConnectionError(
+        f"Could not connect to groundstation after {CONNECT_RETRIES} attempts: {last_error}"
+    )
 
 
 def main() -> None:
-    connection = mavutil.mavlink_connection(
-        CONNECTION_STRING, source_system=1, source_component=AIRSIDE_COMPONENT_ID
-    )
-    time.sleep(1)
-    connection.mav.heartbeat_send(
-        mavutil.mavlink.MAV_TYPE_GCS, mavutil.mavlink.MAV_AUTOPILOT_INVALID, 0, 0, 0
-    )
+    connection = _connect()
+
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     logging.basicConfig(
         filename=Path("logs", f"message_logs_{timestamp}.log"), level=logging.INFO
@@ -32,11 +43,10 @@ def main() -> None:
             f"{1+random.random()*9}"
         )
         message_logger.info(f"{message}")
-        encoded_message = message.encode()
-        connection.mav.statustext_send(
-            mavutil.mavlink.MAV_SEVERITY_INFO, encoded_message
-        )
+        connection.sendall((message + "\n").encode("utf-8"))
+        time.sleep(0.2)
 
+    connection.close()
     return
 
 

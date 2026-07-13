@@ -16,6 +16,7 @@ except ImportError:
     )
 
 import cv2
+import numpy as np
 
 
 class RerunNode(dai.node.ThreadedHostNode):
@@ -26,10 +27,17 @@ class RerunNode(dai.node.ThreadedHostNode):
         self.inputObstaclePCL = dai.Node.Input(self)
         self.inputGroundPCL = dai.Node.Input(self)
         self.inputGrid = dai.Node.Input(self)
+        self.inputTracklets = dai.Node.Input(self)
         self.positions = []
         self.fx = 400.0
         self.fy = 400.0
         self.intrinsicsSet = False
+
+    @staticmethod
+    def _quat_rotate(qx, qy, qz, qw, v):
+        q = np.array([qx, qy, qz])
+        t = 2.0 * np.cross(q, v)
+        return v + qw * t + np.cross(q, t)
 
     def getFocalLengthFromImage(self, imgFrame):
         p = self.getParentPipeline()
@@ -55,6 +63,7 @@ class RerunNode(dai.node.ThreadedHostNode):
             pclObstData = self.inputObstaclePCL.tryGet()
             pclGrndData = self.inputGroundPCL.tryGet()
             mapData = self.inputGrid.tryGet()
+            trackletsMsg = self.inputTracklets.tryGet()
             if transData is not None:
                 trans = transData.getTranslation()
                 quat = transData.getQuaternion()
@@ -95,4 +104,29 @@ class RerunNode(dai.node.ThreadedHostNode):
                         rr.Points3D(points, colors=colors, radii=[0.01]),
                     )
                 if mapData is not None:
-                    rr.log("map", rr.Image(mapData.getCvFrame()))
+                    rr.log("map", rr.Image(mapData.map.getCvFrame()))
+                if trackletsMsg is not None and isinstance(trackletsMsg, dai.Tracklets):
+                    world_positions = []
+                    labels = []
+                    t_world = np.array([trans.x, trans.y, trans.z])
+                    for t in trackletsMsg.tracklets:
+                        if t.status not in (dai.Tracklet.TrackingStatus.NEW, dai.Tracklet.TrackingStatus.TRACKED):
+                            continue
+                        if t.spatialCoordinates.z == 0:
+                            continue
+                        # OAK-D spatial coords are RDF (right, down, forward).
+                        # SLAM quaternion operates on FLU (forward, left, up).
+                        # Convert: FLU_X=RDF_Z, FLU_Y=-RDF_X, FLU_Z=-RDF_Y
+                        cam_pos = np.array([
+                            t.spatialCoordinates.z / 1000.0,
+                            -t.spatialCoordinates.x / 1000.0,
+                            -t.spatialCoordinates.y / 1000.0,
+                        ])
+                        world_pos = self._quat_rotate(quat.qx, quat.qy, quat.qz, quat.qw, cam_pos) + t_world
+                        world_positions.append(world_pos)
+                        labels.append(f"ID:{t.id}")
+                    if world_positions:
+                        rr.log(
+                            "world/targets",
+                            rr.Points3D(world_positions, radii=[0.3], colors=[[255, 50, 50]] * len(world_positions), labels=labels),
+                        )
